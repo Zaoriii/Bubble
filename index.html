@@ -450,6 +450,30 @@ body::before {
   background: rgba(0,255,229,.1);
 }
 
+/* FOLLOWERS MODAL */
+.followers-modal-box {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 16px 16px 0 0; padding: 0; width: 100%; max-width: 620px;
+  max-height: 80vh; overflow-y: auto; margin: 0;
+}
+.followers-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: var(--bg2); z-index: 1;
+}
+.followers-modal-title { font-size: 14px; font-weight: 700; }
+.followers-modal-close {
+  background: none; border: none; color: var(--muted); cursor: pointer;
+  font-size: 1rem; transition: color .2s;
+}
+.followers-modal-close:hover { color: var(--text); }
+.followers-user-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 18px; border-bottom: 1px solid rgba(255,255,255,.04);
+  cursor: pointer; transition: background .15s;
+}
+.followers-user-row:hover { background: var(--hover); }
+
 /* PROFILE TABS */
 .profile-tabs {
   display: flex; border-bottom: 1px solid var(--border);
@@ -818,6 +842,7 @@ const rtdb        = getDatabase(firebaseApp);
 //  ESTADO GLOBAL
 // ============================================================
 let currentUser     = null;   // objeto do perfil (rtdb /users/{uid})
+let _adminSession   = null;   // guarda sessão do admin ao trocar para NPC
 let currentView     = 'feed';
 let activeConvId    = null;
 let profileViewId   = null;
@@ -1423,11 +1448,11 @@ function render() {
 
 function renderHeader() {
   const uc = unreadCount();
-  const prof = cacheUsers[currentUser.uid] || currentUser;
   return `<div class="header">
     <div class="logo">Bubble</div>
     <div class="header-right">
       <span class="fb-status"><span class="fb-dot ${fbOnline?'online':''}"></span>${fbOnline?'live':'offline'}</span>
+      ${_adminSession ? `<button class="icon-btn" id="hdr-back-admin" title="Voltar como admin" style="color:var(--purple);font-size:0.85rem;font-family:'DM Mono',monospace;font-weight:600;">← admin</button>` : ''}
       <button class="icon-btn" id="hdr-notif"><i class="far fa-bell"></i>${uc?`<span class="badge">${uc}</span>`:''}</button>
       <button class="icon-btn" id="hdr-msg"><i class="far fa-paper-plane"></i></button>
       <button class="icon-btn" id="hdr-logout" title="Sair"><i class="fas fa-sign-out-alt"></i></button>
@@ -1734,12 +1759,15 @@ function renderProfile(userId) {
   const allPosts = postsArray().filter(p => p.authorId === userId);
   const photoPosts = allPosts.filter(p => p.imageUrl);
   const textPosts  = allPosts.filter(p => !p.imageUrl);
-  const isOwn = currentUser.uid === userId;
   const isFollowing = !!(cacheUsers[currentUser.uid]?.following?.[userId]);
   let avCls = 'profile-avatar';
   if (user.isNPC && currentUser.role==='admin') avCls += ' npc-profile';
   if (user.role==='admin') avCls += ' admin-profile';
   const avatarInner = user.photoUrl ? `<img src="${esc(user.photoUrl)}">` : (user.avatar || user.username?.[0] || '?');
+
+  const isOwn = currentUser.uid === userId;
+  const followersPrivate = user.followersPrivate && !isOwn && currentUser.role !== 'admin';
+  const canSeeFollowers = !followersPrivate;
 
   const gridHtml = photoPosts.length
     ? photoPosts.map(p=>`<div class="grid-cell" data-open-post="${p.id}" style="background-image:url('${esc(p.imageUrl)}');background-size:cover;background-position:center;"></div>`).join('')
@@ -1767,8 +1795,14 @@ function renderProfile(userId) {
         <div style="flex:1;">
           <div class="profile-stats">
             <div class="stat-item"><div class="stat-num">${allPosts.length}</div><div class="stat-label">posts</div></div>
-            <div class="stat-item"><div class="stat-num">${Object.keys(user.followers||{}).length}</div><div class="stat-label">seguidores</div></div>
-            <div class="stat-item"><div class="stat-num">${Object.keys(user.following||{}).length}</div><div class="stat-label">seguindo</div></div>
+            <div class="stat-item" style="cursor:pointer;" data-open-followers="${userId}">
+              <div class="stat-num">${canSeeFollowers ? Object.keys(user.followers||{}).length : '<i class="fas fa-lock" style="font-size:12px;"></i>'}</div>
+              <div class="stat-label">seguidores</div>
+            </div>
+            <div class="stat-item" style="cursor:pointer;" data-open-following="${userId}">
+              <div class="stat-num">${canSeeFollowers ? Object.keys(user.following||{}).length : '<i class="fas fa-lock" style="font-size:12px;"></i>'}</div>
+              <div class="stat-label">seguindo</div>
+            </div>
           </div>
         </div>
       </div>
@@ -1778,7 +1812,9 @@ function renderProfile(userId) {
       </div>
       <div class="profile-actions">
         ${isOwn
-          ? `<button class="edit-profile-btn" id="editProfileBtn"><i class="fas fa-pen" style="margin-right:6px;font-size:11px;"></i>Editar perfil</button>`
+          ? `<button class="edit-profile-btn" id="editProfileBtn"><i class="fas fa-pen" style="margin-right:6px;font-size:11px;"></i>Editar perfil</button>
+             <button class="edit-profile-btn" id="togglePrivacyBtn" style="border-color:${user.followersPrivate?'var(--purple)':'var(--border)'};color:${user.followersPrivate?'var(--purple)':'var(--muted)'};">
+               <i class="fas fa-${user.followersPrivate?'lock':'unlock'}" style="margin-right:6px;font-size:11px;"></i>${user.followersPrivate?'Privado':'Público'}</button>`
           : `<button class="${isFollowing?'follow-btn following':'follow-btn'}" id="followBtn" data-id="${userId}">${isFollowing?'Seguindo':'Seguir'}</button>
              <button class="edit-profile-btn" id="msgUserBtn" data-id="${userId}"><i class="fas fa-paper-plane" style="margin-right:6px;font-size:11px;"></i>Bolha</button>`}
       </div>
@@ -2089,6 +2125,51 @@ function showEditProfileModal() {
 
 function closeModal() { document.getElementById('modalOverlay')?.remove(); }
 
+function openFollowersModal(userId, mode) {
+  // mode: 'followers' | 'following'
+  const user = cacheUsers[userId]; if (!user) return;
+  const isPrivate = user.followersPrivate && userId !== currentUser.uid && currentUser.role !== 'admin';
+  const ids = isPrivate ? [] : Object.keys(mode === 'followers' ? (user.followers||{}) : (user.following||{}));
+  const users = ids.map(id => cacheUsers[id]).filter(Boolean);
+  const title = mode === 'followers' ? 'Seguidores' : 'Seguindo';
+
+  const html = `<div class="modal-overlay" id="modalOverlay" style="align-items:flex-end;padding:0;">
+    <div class="followers-modal-box">
+      <div class="followers-modal-header">
+        <div class="followers-modal-title">${title} ${isPrivate?'<i class="fas fa-lock" style="font-size:11px;color:var(--purple);"></i>':''}</div>
+        <button class="followers-modal-close" id="closeFollowersModal"><i class="fas fa-times"></i></button>
+      </div>
+      ${isPrivate
+        ? `<div class="empty-state" style="padding:40px 24px;"><i class="fas fa-lock"></i><p>Esta lista é privada.</p></div>`
+        : users.length
+          ? users.map(u => `<div class="followers-user-row" data-view-profile="${u.uid}">
+              <div class="avatar" style="width:38px;height:38px;font-size:20px;flex-shrink:0;">
+                ${u.photoUrl?`<img src="${esc(u.photoUrl)}">`:(u.avatar||u.username?.[0]||'?')}
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;font-weight:600;">${esc(dispName(u))}</div>
+                ${u.bio?`<div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(u.bio)}</div>`:''}
+              </div>
+            </div>`).join('')
+          : `<div class="empty-state" style="padding:40px 24px;"><i class="fas fa-user-friends"></i><p>Nenhum usuário aqui.</p></div>`
+      }
+      <div style="height:env(safe-area-inset-bottom,12px);"></div>
+    </div>
+  </div>`;
+
+  document.body.insertAdjacentHTML('beforeend', html);
+  document.getElementById('closeFollowersModal')?.addEventListener('click', closeModal);
+  document.getElementById('modalOverlay')?.addEventListener('click', e => { if(e.target.id==='modalOverlay') closeModal(); });
+  document.querySelectorAll('#modalOverlay [data-view-profile]').forEach(el => {
+    el.addEventListener('click', () => {
+      closeModal();
+      profileViewId = el.dataset.viewProfile;
+      currentView = 'profile';
+      render();
+    });
+  });
+}
+
 function openPostModal(pid) {
   const post = cachePosts[pid]; if (!post) return;
   const html = `<div class="modal-overlay" id="modalOverlay" style="align-items:flex-end;padding:0;">
@@ -2225,7 +2306,26 @@ function attachMainEvents() {
   });
 
   document.getElementById('hdr-logout')?.addEventListener('click', () => {
-    if (confirm('Deseja sair da sua conta?')) logout();
+    if (confirm('Deseja sair da sua conta?')) { _adminSession = null; logout(); }
+  });
+  document.getElementById('hdr-back-admin')?.addEventListener('click', async () => {
+    if (!_adminSession) return;
+    const adminUid = _adminSession.uid;
+    _adminSession = null;
+    clearListeners();
+    await signOut(auth);
+    // busca perfil do admin direto pelo uid — não precisa de senha
+    const profile = await fbGet(`users/${adminUid}`);
+    if (profile) {
+      // re-autentica via email/pass não disponível sem senha, então usa onAuthStateChanged
+      // alternativa: manter admin logado em paralelo não é possível no Firebase client
+      // solução simples: pede login manual novamente
+      currentUser = null;
+      cacheUsers = {}; cachePosts = {}; cacheComments = {};
+      cacheLikes = {}; cacheNotifs = []; cacheConvs = {}; cacheMsgs = {};
+      render();
+      toast('Sessão NPC encerrada. Faça login como admin.');
+    }
   });
 
   document.getElementById('followBtn')?.addEventListener('click', () => {
@@ -2242,6 +2342,21 @@ function attachMainEvents() {
       profileTab = btn.dataset.profileTab;
       render();
     });
+  });
+
+  // Followers / Following modal
+  document.querySelectorAll('[data-open-followers]').forEach(el => {
+    el.addEventListener('click', () => openFollowersModal(el.dataset.openFollowers, 'followers'));
+  });
+  document.querySelectorAll('[data-open-following]').forEach(el => {
+    el.addEventListener('click', () => openFollowersModal(el.dataset.openFollowing, 'following'));
+  });
+
+  // Privacy toggle
+  document.getElementById('togglePrivacyBtn')?.addEventListener('click', async () => {
+    const current = cacheUsers[currentUser.uid]?.followersPrivate || false;
+    await fbUpdate(`users/${currentUser.uid}`, { followersPrivate: !current });
+    toast(!current ? 'Seguidores privados' : 'Seguidores públicos');
   });
 
   // Open post from profile grid or text list
@@ -2316,8 +2431,10 @@ function attachMainEvents() {
     if (!_npcSwitchUsername) return;
     const pass = document.getElementById('npcSwitchPass')?.value;
     const errEl = document.getElementById('npcSwitchError');
-    const email = `${_npcSwitchUsername.toLowerCase().replace(/[^a-z0-9]/g,'')}@npc.bubble`;
+    const email = fakeEmail(_npcSwitchUsername);
     try {
+      // salva credenciais do admin para poder voltar
+      _adminSession = { username: currentUser.username, pass: null, uid: currentUser.uid };
       clearListeners();
       await signOut(auth);
       const cred = await signInWithEmailAndPassword(auth, email, pass);
@@ -2330,6 +2447,7 @@ function attachMainEvents() {
         toast('Logado como ' + _npcSwitchUsername);
       }
     } catch(e) {
+      _adminSession = null;
       if (errEl) errEl.style.display = 'block';
     }
   });
