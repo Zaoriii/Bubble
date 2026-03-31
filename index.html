@@ -6,31 +6,31 @@
 <title>Bubble · Rede Neural</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #070710;
-  --bg2: #0d0d1a;
-  --bg3: #12121f;
-  --border: rgba(0,255,255,0.12);
-  --border2: rgba(255,61,127,0.15);
-  --cyan: #00ffe5;
-  --pink: #ff3d7f;
-  --purple: #9b5de5;
-  --yellow: #f5c400;
-  --orange: #ff8c00;
-  --text: #e8e8f0;
-  --muted: #5a5a7a;
-  --card: #0f0f1e;
-  --hover: rgba(0,255,229,0.06);
-  --glow-c: 0 0 18px rgba(0,255,229,0.25);
-  --glow-p: 0 0 18px rgba(255,61,127,0.25);
+  --bg: #06060f;
+  --bg2: #0a0a16;
+  --bg3: #0f0f1c;
+  --border: rgba(255,255,255,0.06);
+  --border2: rgba(255,61,127,0.1);
+  --cyan: #00e5cc;
+  --pink: #e83d72;
+  --purple: #7c4fd4;
+  --yellow: #d4a800;
+  --orange: #e07000;
+  --text: #d8d8e8;
+  --muted: #44445a;
+  --card: #06060f;
+  --hover: rgba(0,229,204,0.04);
+  --glow-c: 0 0 12px rgba(0,229,204,0.15);
+  --glow-p: 0 0 12px rgba(232,61,114,0.15);
 }
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 html { scroll-behavior: smooth; }
 body {
   background: var(--bg);
-  font-family: 'Syne', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   color: var(--text);
   min-height: 100vh;
   overflow-x: hidden;
@@ -38,8 +38,7 @@ body {
 body::before {
   content:'';
   position:fixed; inset:0;
-  background: radial-gradient(ellipse 80% 60% at 20% -10%, rgba(0,255,229,0.04) 0%, transparent 60%),
-              radial-gradient(ellipse 60% 50% at 80% 110%, rgba(155,93,229,0.05) 0%, transparent 60%);
+  background: radial-gradient(ellipse 60% 40% at 15% -5%, rgba(0,229,204,0.03) 0%, transparent 55%);
   pointer-events:none; z-index:0;
 }
 ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -51,19 +50,19 @@ body::before {
 /* HEADER */
 .header {
   position: sticky; top: 0; z-index: 200;
-  background: rgba(7,7,16,0.92);
-  backdrop-filter: blur(20px);
+  background: rgba(6,6,15,0.96);
+  backdrop-filter: blur(24px);
   border-bottom: 1px solid var(--border);
-  padding: 10px 18px;
+  padding: 12px 20px;
   display: flex; align-items: center; justify-content: space-between;
 }
 .logo {
-  font-family: 'Space Mono', monospace;
-  font-weight: 700; font-size: 1.5rem;
-  letter-spacing: -1px;
-  background: linear-gradient(120deg, var(--cyan) 0%, var(--purple) 60%, var(--pink) 100%);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
+  font-family: 'DM Mono', monospace;
+  font-weight: 500; font-size: 1.25rem;
+  letter-spacing: 0px;
+  color: var(--cyan);
   position: relative;
+  opacity: 0.9;
 }
 .logo::after {
   content: '●';
@@ -84,7 +83,7 @@ body::before {
   position: absolute; top: -5px; right: -6px;
   background: var(--pink); color: #fff;
   font-size: 9px; border-radius: 20px;
-  padding: 1px 5px; font-family: 'Space Mono', monospace;
+  padding: 1px 5px; font-family: 'DM Mono', monospace;
 }
 
 /* STORIES */
@@ -101,14 +100,15 @@ body::before {
   vertical-align: top;
 }
 .story-ring {
-  width: 62px; height: 62px; border-radius: 50%;
-  background: conic-gradient(var(--cyan), var(--purple), var(--pink), var(--cyan));
+  width: 60px; height: 60px; border-radius: 50%;
+  background: conic-gradient(var(--cyan) 0%, var(--purple) 60%, var(--cyan) 100%);
   display: flex; align-items: center; justify-content: center;
-  transition: transform .2s; flex-shrink: 0;
+  transition: transform .2s, opacity .2s; flex-shrink: 0;
+  opacity: 0.85;
 }
-.story-ring:hover { transform: scale(1.08); }
+.story-ring:hover { opacity: 1; }
 .story-inner {
-  width: 56px; height: 56px; border-radius: 50%;
+  width: 54px; height: 54px; border-radius: 50%;
   background: var(--bg2);
   display: flex; align-items: center; justify-content: center;
   font-size: 26px; overflow: hidden;
@@ -118,9 +118,9 @@ body::before {
 
 /* POST */
 .post {
-  background: var(--card);
+  background: var(--bg);
   border-bottom: 1px solid var(--border);
-  animation: fadeInUp .35s ease both;
+  animation: fadeInUp .3s ease both;
 }
 @keyframes fadeInUp { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
 .post.event-post { border-left: 3px solid var(--yellow); }
@@ -142,13 +142,13 @@ body::before {
 .avatar.admin-ring { border-color: var(--pink); }
 .post-meta { flex: 1; min-width: 0; }
 .post-author {
-  font-size: 13px; font-weight: 700;
+  font-size: 13px; font-weight: 600;
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
 }
-.post-time { font-size: 10px; color: var(--muted); font-family: 'Space Mono', monospace; margin-top: 1px; }
+.post-time { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 1px; }
 .badge-tag {
   font-size: 9px; border-radius: 20px; padding: 1px 7px;
-  font-family: 'Space Mono', monospace; font-weight: 700; letter-spacing: .5px;
+  font-family: 'DM Mono', monospace; font-weight: 700; letter-spacing: .5px;
 }
 .badge-npc { background: rgba(155,93,229,.15); color: var(--purple); border: 1px solid rgba(155,93,229,.4); }
 .badge-admin { background: rgba(255,61,127,.15); color: var(--pink); border: 1px solid rgba(255,61,127,.4); }
@@ -169,8 +169,8 @@ body::before {
 .post-image img { width: 100%; display: block; object-fit: cover; }
 .post-image iframe { width:100%; height:320px; border:none; }
 .post-no-image {
-  padding: 18px 14px;
-  font-size: 15px; line-height: 1.6; color: var(--text);
+  padding: 16px 16px;
+  font-size: 14px; line-height: 1.65; color: var(--text);
 }
 .hashtag { color: var(--cyan); }
 .post-actions {
@@ -180,14 +180,14 @@ body::before {
 .act-btn {
   background: none; border: none;
   color: var(--muted); cursor: pointer;
-  font-size: 1.4rem; transition: color .2s, transform .15s;
-  display: flex; align-items: center; gap: 6px;
+  font-size: 1.15rem; transition: color .2s, transform .15s;
+  display: flex; align-items: center; gap: 5px;
 }
-.act-btn:hover { color: var(--text); transform: scale(1.1); }
+.act-btn:hover { color: var(--text); transform: scale(1.05); }
 .act-btn.liked { color: var(--pink); }
 .act-btn.liked i { animation: heartPop .25s ease; }
 @keyframes heartPop { 0%{transform:scale(1)} 50%{transform:scale(1.4)} 100%{transform:scale(1)} }
-.act-count { font-size: 11px; font-family:'Space Mono',monospace; color: var(--muted); }
+.act-count { font-size: 11px; font-family:'DM Mono', monospace; color: var(--muted); }
 .act-btn.liked .act-count { color: var(--pink); }
 .post-body { padding: 4px 14px 10px; }
 .caption { font-size: 13.5px; line-height: 1.55; }
@@ -195,7 +195,7 @@ body::before {
 .hidden-hint {
   display: inline-block; margin-top: 8px;
   font-size: 11px; color: var(--purple);
-  font-family: 'Space Mono', monospace;
+  font-family: 'DM Mono', monospace;
   cursor: pointer; border: 1px solid rgba(155,93,229,.3);
   border-radius: 4px; padding: 2px 8px;
   transition: background .2s;
@@ -205,7 +205,7 @@ body::before {
   margin-top: 8px; padding: 8px 10px;
   background: rgba(155,93,229,.1); border: 1px solid rgba(155,93,229,.3);
   border-radius: 6px; font-size: 12px; color: var(--purple);
-  font-family: 'Space Mono', monospace;
+  font-family: 'DM Mono', monospace;
   animation: fadeInUp .25s ease;
 }
 .comments-section { padding: 0 14px 6px; }
@@ -222,26 +222,26 @@ body::before {
 .comment-input-field {
   flex: 1; background: transparent; border: none;
   color: var(--text); font-size: 13px;
-  font-family: 'Syne', sans-serif; outline: none;
+  font-family: 'DM Sans', sans-serif; outline: none;
 }
 .comment-input-field::placeholder { color: var(--muted); }
 .post-comment-btn {
   background: none; border: none; color: var(--cyan);
   font-weight: 700; font-size: 12px; cursor: pointer;
-  font-family: 'Syne', sans-serif;
+  font-family: 'DM Sans', sans-serif;
 }
 .post-comment-btn:hover { opacity: .7; }
-.edited-tag { font-size: 10px; color: var(--muted); font-family:'Space Mono',monospace; margin-left: 4px; }
+.edited-tag { font-size: 10px; color: var(--muted); font-family:'DM Mono', monospace; margin-left: 4px; }
 
 /* BOTTOM NAV */
 .bottom-nav {
   position: fixed; bottom: 0; left: 0; right: 0;
   max-width: 620px; margin: 0 auto;
-  background: rgba(7,7,16,0.95);
-  backdrop-filter: blur(20px);
+  background: rgba(6,6,15,0.97);
+  backdrop-filter: blur(24px);
   border-top: 1px solid var(--border);
   display: flex; justify-content: space-around; align-items: center;
-  padding: 10px 8px 16px;
+  padding: 10px 8px 18px;
   z-index: 200;
 }
 .nav-btn {
@@ -255,7 +255,8 @@ body::before {
 .nav-btn.active::after {
   content: '';
   position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%);
-  width: 4px; height: 4px; border-radius: 50%; background: var(--cyan);
+  width: 16px; height: 1.5px; border-radius: 2px; background: var(--cyan);
+  opacity: 0.8;
 }
 .nav-btn.skull { color: var(--pink) !important; }
 .nav-btn.skull.active { color: var(--pink) !important; }
@@ -278,27 +279,28 @@ body::before {
 .search-input {
   flex: 1; background: var(--bg3); border: 1px solid var(--border);
   border-radius: 8px; padding: 10px 14px;
-  color: var(--text); font-size: 13px; font-family: 'Syne', sans-serif;
+  color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif;
   outline: none; transition: border-color .2s;
 }
 .search-input:focus { border-color: var(--cyan); }
 .search-input::placeholder { color: var(--muted); }
 .btn-primary {
   background: var(--cyan); color: var(--bg);
-  border: none; border-radius: 8px; padding: 10px 16px;
-  font-weight: 700; font-size: 13px; cursor: pointer;
-  font-family: 'Syne', sans-serif; transition: opacity .2s;
+  border: none; border-radius: 6px; padding: 10px 16px;
+  font-weight: 600; font-size: 13px; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; transition: opacity .2s;
+  letter-spacing: 0.2px;
 }
 .btn-primary:hover { opacity: .8; }
 .btn-ghost {
   background: var(--bg3); color: var(--text);
   border: 1px solid var(--border); border-radius: 8px;
   padding: 8px 14px; font-weight: 600; font-size: 12px;
-  cursor: pointer; font-family: 'Syne', sans-serif; transition: border-color .2s;
+  cursor: pointer; font-family: 'DM Sans', sans-serif; transition: border-color .2s;
 }
 .btn-ghost:hover { border-color: var(--cyan); }
 .result-group { padding: 12px 18px 4px; }
-.result-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); font-family: 'Space Mono', monospace; margin-bottom: 10px; }
+.result-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 10px; }
 .result-user {
   display: flex; align-items: center; gap: 10px;
   padding: 8px 0; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,.04);
@@ -309,7 +311,7 @@ body::before {
   padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.04);
   font-size: 13px; color: var(--muted); line-height: 1.5;
 }
-.result-post strong { color: var(--text); font-size: 11px; font-family:'Space Mono',monospace; display:block; margin-bottom:2px; }
+.result-post strong { color: var(--text); font-size: 11px; font-family:'DM Mono', monospace; display:block; margin-bottom:2px; }
 
 /* NOTIFICATIONS */
 .notif-item {
@@ -322,7 +324,7 @@ body::before {
 .notif-item.unread { background: rgba(0,255,229,.03); }
 .notif-text { flex: 1; font-size: 13px; line-height: 1.5; }
 .notif-text strong { color: var(--cyan); }
-.notif-time { font-size: 10px; color: var(--muted); font-family:'Space Mono',monospace; }
+.notif-time { font-size: 10px; color: var(--muted); font-family:'DM Mono', monospace; }
 
 /* MESSAGES */
 .conv-list { padding: 0; }
@@ -333,7 +335,7 @@ body::before {
 }
 .conv-item:hover { background: var(--hover); }
 .conv-name { font-weight: 700; font-size: 13.5px; }
-.conv-preview { font-size: 11px; color: var(--muted); margin-top: 2px; font-family:'Space Mono',monospace; }
+.conv-preview { font-size: 11px; color: var(--muted); margin-top: 2px; font-family:'DM Mono', monospace; }
 .chat-area { display: flex; flex-direction: column; height: calc(100vh - 200px); }
 .chat-header {
   padding: 12px 18px; border-bottom: 1px solid var(--border);
@@ -355,7 +357,7 @@ body::before {
   align-self: flex-start; background: var(--bg3);
   border: 1px solid var(--border); border-bottom-left-radius: 4px;
 }
-.msg-time { font-size: 9px; color: var(--muted); font-family:'Space Mono',monospace; margin-top: 3px; text-align:right; }
+.msg-time { font-size: 9px; color: var(--muted); font-family:'DM Mono', monospace; margin-top: 3px; text-align:right; }
 .chat-input-row {
   padding: 12px 18px; border-top: 1px solid var(--border);
   display: flex; gap: 10px; background: var(--bg2);
@@ -363,7 +365,7 @@ body::before {
 .chat-text-input {
   flex:1; background: var(--bg3); border: 1px solid var(--border);
   border-radius: 22px; padding: 10px 16px;
-  color: var(--text); font-size: 13px; font-family:'Syne',sans-serif;
+  color: var(--text); font-size: 13px; font-family:'DM Sans', sans-serif;
   outline: none; transition: border-color .2s;
 }
 .chat-text-input:focus { border-color: var(--cyan); }
@@ -390,8 +392,8 @@ body::before {
   cursor: pointer; transition: background .2s;
 }
 .trending-item:hover { background: var(--hover); }
-.trend-tag { font-size: 14px; font-weight: 700; color: var(--cyan); font-family:'Space Mono',monospace; }
-.trend-count { font-size: 11px; color: var(--muted); font-family:'Space Mono',monospace; }
+.trend-tag { font-size: 14px; font-weight: 700; color: var(--cyan); font-family:'DM Mono', monospace; }
+.trend-count { font-size: 11px; color: var(--muted); font-family:'DM Mono', monospace; }
 .trend-num { font-size: 10px; color: var(--muted); width: 20px; }
 
 /* PROFILE */
@@ -421,7 +423,7 @@ body::before {
   flex:1; background: var(--cyan); color: var(--bg);
   border:none; border-radius: 8px; padding: 9px;
   font-weight: 700; font-size: 13px; cursor: pointer;
-  font-family:'Syne',sans-serif; transition: opacity .2s;
+  font-family:'DM Sans', sans-serif; transition: opacity .2s;
 }
 .follow-btn:hover { opacity:.8; }
 .follow-btn.following { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
@@ -429,7 +431,7 @@ body::before {
   flex:1; background: var(--bg3); color: var(--text);
   border: 1px solid var(--border); border-radius: 8px; padding: 9px;
   font-weight: 700; font-size: 13px; cursor: pointer;
-  font-family:'Syne',sans-serif; transition: border-color .2s;
+  font-family:'DM Sans', sans-serif; transition: border-color .2s;
 }
 .edit-profile-btn:hover { border-color: var(--cyan); }
 .profile-grid {
@@ -454,14 +456,14 @@ body::before {
 }
 .admin-section-title {
   font-size: 11px; text-transform: uppercase; letter-spacing: 2px;
-  color: var(--pink); font-family:'Space Mono',monospace;
+  color: var(--pink); font-family:'DM Mono', monospace;
   margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
 }
 .admin-row { display:flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
 .admin-input {
   flex:1; min-width: 120px; background: var(--bg3); border: 1px solid var(--border2);
   border-radius: 6px; padding: 8px 12px;
-  color: var(--text); font-size: 12px; font-family:'Space Mono',monospace;
+  color: var(--text); font-size: 12px; font-family:'DM Mono', monospace;
   outline: none; transition: border-color .2s;
 }
 .admin-input:focus { border-color: var(--pink); }
@@ -470,28 +472,28 @@ body::before {
   background: rgba(255,61,127,.15); color: var(--pink);
   border: 1px solid rgba(255,61,127,.3); border-radius: 6px;
   padding: 8px 14px; font-weight: 700; font-size: 12px; cursor: pointer;
-  font-family:'Space Mono',monospace; transition: background .2s;
+  font-family:'DM Mono', monospace; transition: background .2s;
 }
 .btn-danger:hover { background: rgba(255,61,127,.25); }
 .btn-warn {
   background: rgba(245,196,0,.1); color: var(--yellow);
   border: 1px solid rgba(245,196,0,.3); border-radius: 6px;
   padding: 8px 14px; font-weight: 700; font-size: 12px; cursor: pointer;
-  font-family:'Space Mono',monospace; transition: background .2s;
+  font-family:'DM Mono', monospace; transition: background .2s;
 }
 .btn-warn:hover { background: rgba(245,196,0,.2); }
 .btn-sys {
   background: rgba(0,255,229,.1); color: var(--cyan);
   border: 1px solid rgba(0,255,229,.25); border-radius: 6px;
   padding: 8px 14px; font-weight: 700; font-size: 12px; cursor: pointer;
-  font-family:'Space Mono',monospace; transition: background .2s;
+  font-family:'DM Mono', monospace; transition: background .2s;
 }
 .btn-sys:hover { background: rgba(0,255,229,.2); }
 .user-list-table { margin-top: 12px; }
 .user-list-row {
   display:flex; align-items:center; gap:10px;
   padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.04);
-  font-size: 12px; font-family:'Space Mono',monospace;
+  font-size: 12px; font-family:'DM Mono', monospace;
 }
 .user-list-row .uname { flex:1; color: var(--text); }
 .user-list-row .role-tag { color: var(--muted); font-size: 10px; }
@@ -504,12 +506,12 @@ body::before {
   background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0,255,229,0.06) 0%, transparent 60%);
 }
 .login-logo {
-  font-family:'Space Mono',monospace; font-size: 3rem; font-weight: 700;
+  font-family:'DM Mono', monospace; font-size: 3rem; font-weight: 700;
   background: linear-gradient(120deg, var(--cyan), var(--purple), var(--pink));
   -webkit-background-clip: text; background-clip: text; color:transparent;
   margin-bottom: 6px; letter-spacing:-2px;
 }
-.login-tagline { font-size: 11px; color: var(--muted); font-family:'Space Mono',monospace; margin-bottom: 40px; letter-spacing:3px; text-transform:uppercase; }
+.login-tagline { font-size: 11px; color: var(--muted); font-family:'DM Mono', monospace; margin-bottom: 40px; letter-spacing:3px; text-transform:uppercase; }
 .login-card {
   width: 100%; max-width: 360px;
   background: var(--card);
@@ -522,7 +524,7 @@ body::before {
   width:100%; background: var(--bg3);
   border: 1px solid var(--border); border-radius: 8px;
   padding: 12px 14px; color: var(--text); font-size: 13px;
-  font-family:'Syne',sans-serif; outline:none;
+  font-family:'DM Sans', sans-serif; outline:none;
   margin-bottom: 10px; transition: border-color .2s;
 }
 .login-field:focus { border-color: var(--cyan); }
@@ -531,11 +533,11 @@ body::before {
   width:100%; background: linear-gradient(120deg, var(--cyan), var(--purple));
   border:none; border-radius: 8px; padding: 13px;
   color: var(--bg); font-size: 14px; font-weight: 800;
-  font-family:'Syne',sans-serif; cursor: pointer; transition: opacity .2s;
+  font-family:'DM Sans', sans-serif; cursor: pointer; transition: opacity .2s;
   margin-top: 4px;
 }
 .login-btn:hover { opacity:.85; }
-.login-error { font-size: 12px; color: var(--pink); font-family:'Space Mono',monospace; margin-bottom: 8px; }
+.login-error { font-size: 12px; color: var(--pink); font-family:'DM Mono', monospace; margin-bottom: 8px; }
 
 /* MODAL */
 .modal-overlay {
@@ -546,9 +548,9 @@ body::before {
 }
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 .modal-box {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 16px; padding: 24px; width: 90%; max-width: 400px;
-  animation: slideUp .25s ease;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 22px 20px; width: 92%; max-width: 400px;
+  animation: slideUp .2s ease;
   max-height: 90vh; overflow-y: auto;
 }
 @keyframes slideUp { from{transform:translateY(30px);opacity:0} to{transform:translateY(0);opacity:1} }
@@ -556,14 +558,14 @@ body::before {
 .modal-textarea {
   width:100%; background: var(--bg3); border: 1px solid var(--border);
   border-radius: 8px; padding: 12px; color: var(--text);
-  font-size: 13px; font-family:'Syne',sans-serif; outline:none;
+  font-size: 13px; font-family:'DM Sans', sans-serif; outline:none;
   resize: vertical; min-height: 90px; transition: border-color .2s;
 }
 .modal-textarea:focus { border-color: var(--cyan); }
 .modal-input {
   width:100%; background: var(--bg3); border: 1px solid var(--border);
   border-radius: 8px; padding: 10px 12px; color: var(--text);
-  font-size: 13px; font-family:'Syne',sans-serif; outline:none;
+  font-size: 13px; font-family:'DM Sans', sans-serif; outline:none;
   margin-top: 8px; transition: border-color .2s;
 }
 .modal-input:focus { border-color: var(--cyan); }
@@ -572,12 +574,12 @@ body::before {
 .modal-cancel {
   background: var(--bg3); color: var(--muted); border: 1px solid var(--border);
   border-radius: 8px; padding: 9px 16px; font-weight:600; font-size:13px;
-  cursor:pointer; font-family:'Syne',sans-serif;
+  cursor:pointer; font-family:'DM Sans', sans-serif;
 }
 .modal-publish {
   background: var(--cyan); color: var(--bg); border:none;
   border-radius: 8px; padding: 9px 16px; font-weight:800; font-size:13px;
-  cursor:pointer; font-family:'Syne',sans-serif; transition: opacity .2s;
+  cursor:pointer; font-family:'DM Sans', sans-serif; transition: opacity .2s;
 }
 .modal-publish:hover { opacity:.8; }
 .modal-publish:disabled { opacity:.4; cursor:not-allowed; }
@@ -587,7 +589,7 @@ body::before {
   border: 1px dashed var(--border); border-radius: 8px;
   padding: 14px; text-align:center; cursor:pointer;
   margin-top: 8px; transition: border-color .2s;
-  font-size: 12px; color: var(--muted); font-family:'Space Mono',monospace;
+  font-size: 12px; color: var(--muted); font-family:'DM Mono', monospace;
 }
 .upload-area:hover { border-color: var(--cyan); color: var(--cyan); }
 .upload-preview {
@@ -614,7 +616,7 @@ body::before {
 .opt-item {
   display:block; width:100%; background:none; border:none;
   padding: 11px 16px; text-align:left; font-size:13px;
-  color: var(--text); cursor:pointer; font-family:'Syne',sans-serif;
+  color: var(--text); cursor:pointer; font-family:'DM Sans', sans-serif;
   transition: background .15s; border-radius:10px;
 }
 .opt-item:hover { background: var(--hover); }
@@ -626,7 +628,7 @@ body::before {
   background: linear-gradient(90deg, rgba(245,196,0,.1), transparent);
   border-left: 3px solid var(--yellow);
   font-size: 12px; color: var(--yellow);
-  font-family:'Space Mono',monospace;
+  font-family:'DM Mono', monospace;
   display:flex; align-items:center; gap:8px;
 }
 .event-alert i { animation: pulse 1.5s ease infinite; }
@@ -635,7 +637,7 @@ body::before {
 /* EMPTY STATE */
 .empty-state {
   text-align:center; padding: 60px 24px;
-  color: var(--muted); font-family:'Space Mono',monospace;
+  color: var(--muted); font-family:'DM Mono', monospace;
 }
 .empty-state i { font-size: 2.5rem; margin-bottom: 14px; display:block; opacity:.4; }
 .empty-state p { font-size: 12px; line-height: 1.7; }
@@ -645,7 +647,7 @@ body::before {
 .vis-btn {
   background: var(--bg3); border: 1px solid var(--border);
   border-radius: 6px; padding: 6px 12px; font-size:11px;
-  color: var(--muted); cursor:pointer; font-family:'Space Mono',monospace;
+  color: var(--muted); cursor:pointer; font-family:'DM Mono', monospace;
   transition: all .2s;
 }
 .vis-btn.selected { border-color: var(--cyan); color: var(--cyan); background: rgba(0,255,229,.08); }
@@ -665,7 +667,7 @@ body::before {
   position:fixed; bottom: 100px; left:50%; transform:translateX(-50%);
   background: var(--bg2); border: 1px solid var(--border);
   border-radius: 8px; padding: 10px 18px;
-  font-size: 12px; font-family:'Space Mono',monospace; color: var(--cyan);
+  font-size: 12px; font-family:'DM Mono', monospace; color: var(--cyan);
   z-index:9999; animation: toastIn .25s ease;
   white-space: nowrap; pointer-events:none;
 }
@@ -677,7 +679,7 @@ body::before {
   align-items:center; justify-content:center; gap: 16px;
 }
 .loading-logo {
-  font-family:'Space Mono',monospace; font-size: 2.5rem; font-weight:700;
+  font-family:'DM Mono', monospace; font-size: 2.5rem; font-weight:700;
   background: linear-gradient(120deg, var(--cyan), var(--purple), var(--pink));
   -webkit-background-clip: text; background-clip: text; color:transparent;
 }
@@ -692,7 +694,7 @@ body::before {
 
 /* FIREBASE STATUS */
 .fb-status {
-  font-size: 9px; font-family:'Space Mono',monospace;
+  font-size: 9px; font-family:'DM Mono', monospace;
   color: var(--muted); display:flex; align-items:center; gap:5px;
 }
 .fb-dot { width:6px; height:6px; border-radius:50%; background: var(--muted); }
@@ -719,7 +721,7 @@ body::before {
 .cropper-btn {
   background: var(--bg3); border: 1px solid var(--border);
   border-radius: 8px; padding: 9px 16px;
-  color: var(--text); font-size: 12px; font-family: 'Space Mono', monospace;
+  color: var(--text); font-size: 12px; font-family: 'DM Mono', monospace;
   cursor: pointer; transition: border-color .2s;
 }
 .cropper-btn:hover { border-color: var(--cyan); color: var(--cyan); }
@@ -729,7 +731,7 @@ body::before {
 .cropper-ratio-btn {
   background: var(--bg3); border: 1px solid var(--border);
   border-radius: 6px; padding: 6px 10px;
-  color: var(--muted); font-size: 10px; font-family: 'Space Mono', monospace;
+  color: var(--muted); font-size: 10px; font-family: 'DM Mono', monospace;
   cursor: pointer; transition: all .2s;
 }
 .cropper-ratio-btn.active { border-color: var(--purple); color: var(--purple); background: rgba(155,93,229,.1); }
@@ -1517,7 +1519,7 @@ function renderPost(post) {
     ${post.hiddenContent?`<div class="post-body"><span class="hidden-hint" data-reveal="${post.id}">🔮 Conteúdo oculto — clique para revelar</span></div>`:''}
     <div class="comments-section" id="cmts-${post.id}">${renderCommentsInner(post.id, comments, false)}</div>
     <div class="add-comment-row">
-      <input class="comment-input-field" data-post="${post.id}" placeholder="Adicione um comentário..." />
+      <input class="comment-input-field" data-post="${post.id}" placeholder="escreva algo..." />
       <button class="post-comment-btn" data-post="${post.id}">Publicar</button>
     </div>
   </div>`;
@@ -1608,7 +1610,7 @@ function renderNotifications() {
       const from = getUserById(n.fromUserId);
       return `<div class="notif-item">
         <div class="avatar" style="width:36px;height:36px;font-size:18px;">${from?.photoUrl?`<img src="${esc(from.photoUrl)}">`:(from?.avatar||'?')}</div>
-        <div class="notif-text"><strong>${esc(from?.username||'?')}</strong> ${n.type==='like'?'curtiu seu post':'comentou no seu post'}</div>
+        <div class="notif-text"><strong>${esc(from?.username||'?')}</strong> ${n.type==='like'?'estourou seu post':'comentou no seu post'}</div>
         <div class="notif-time">${timeAgo(n.timestamp)}</div>
       </div>`;
     }).join('')
@@ -1624,7 +1626,7 @@ function renderMessages() {
     .sort((a,b) => new Date(b.lastUpdated)-new Date(a.lastUpdated));
   const otherUsers = Object.values(cacheUsers).filter(u => u.uid !== currentUser.uid);
   return `<div class="page">
-    <div class="page-title"><i class="fas fa-ghost"></i> Whispers</div>
+    <div class="page-title"><i class="fas fa-ghost"></i> Bolhas</div>
     <div class="conv-list">
       ${convs.map(c => {
         const otherId = Object.keys(c.participants||{}).find(id => id!==currentUser.uid);
@@ -1641,7 +1643,7 @@ function renderMessages() {
         </div>`;
       }).join('')}
     </div>
-    <div class="new-chat-btn" id="startNewChat">+ Iniciar novo Whisper</div>
+    <div class="new-chat-btn" id="startNewChat">+ Nova Bolha</div>
     <div id="newChatPanel" style="display:none; padding:12px 18px; border-top:1px solid var(--border);">
       <div class="result-label" style="margin-bottom:10px;">Selecionar usuário</div>
       ${otherUsers.map(u=>`<div class="result-user" data-start-conv="${u.uid}">
@@ -1671,7 +1673,7 @@ function renderChat(convId) {
       </div>`).join('')}
     </div>
     <div class="chat-input-row">
-      <input class="chat-text-input" id="chatInput" placeholder="Enviar mensagem criptografada..." />
+      <input class="chat-text-input" id="chatInput" placeholder="manda uma bolha..." />
       <button class="send-btn" id="sendMsgBtn"><i class="fas fa-paper-plane"></i></button>
     </div>
   </div>`;
@@ -1720,14 +1722,14 @@ function renderProfile(userId) {
         ${isOwn
           ? `<button class="edit-profile-btn" id="editProfileBtn"><i class="fas fa-pen" style="margin-right:6px;font-size:11px;"></i>Editar perfil</button>`
           : `<button class="${isFollowing?'follow-btn following':'follow-btn'}" id="followBtn" data-id="${userId}">${isFollowing?'Seguindo':'Seguir'}</button>
-             <button class="edit-profile-btn" id="msgUserBtn" data-id="${userId}"><i class="fas fa-paper-plane" style="margin-right:6px;font-size:11px;"></i>Whisper</button>`}
+             <button class="edit-profile-btn" id="msgUserBtn" data-id="${userId}"><i class="fas fa-paper-plane" style="margin-right:6px;font-size:11px;"></i>Bolha</button>`}
       </div>
     </div>
     <div class="profile-grid">
       ${posts.length ? posts.map(p=>`<div class="grid-cell" style="${p.imageUrl?`background-image:url('${esc(p.imageUrl)}');background-size:cover;`:''}">
         ${!p.imageUrl?`<div class="grid-cell-inner"><i class="fas fa-align-left"></i></div>`:''}
       </div>`).join('')
-      : '<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--muted);font-size:12px;font-family:Space Mono,monospace;">Nenhum post ainda.</div>'}
+      : '<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--muted);font-size:12px;font-family:DM Mono, monospace;">Nenhum post ainda.</div>'}
     </div>
   </div>`;
 }
@@ -1740,21 +1742,21 @@ function renderAdmin() {
     <div class="admin-section">
       <div class="admin-section-title"><i class="fas fa-masks-theater"></i> Trocar para NPC</div>
       ${npcs.length ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
-        ${npcs.map(u=>`<button class="btn-npc-switch" data-npc-user="${esc(u.username)}" style="display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:8px 12px;cursor:pointer;color:var(--text);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;transition:border-color .2s;" onmouseover="this.style.borderColor='var(--purple)'" onmouseout="this.style.borderColor='var(--border)'">
+        ${npcs.map(u=>`<button class="btn-npc-switch" data-npc-user="${esc(u.username)}" style="display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:8px 12px;cursor:pointer;color:var(--text);font-family:'DM Sans', sans-serif;font-size:12px;font-weight:700;transition:border-color .2s;" onmouseover="this.style.borderColor='var(--purple)'" onmouseout="this.style.borderColor='var(--border)'">
           <span style="font-size:20px;">${u.avatar||'👾'}</span>
           <span>${esc(u.username)}</span>
         </button>`).join('')}
       </div>
       <div id="npcSwitchPanel" style="display:none;margin-top:10px;padding:12px;background:var(--bg2);border-radius:8px;border:1px solid var(--border);">
-        <div style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:8px;">Digite a senha do NPC <strong id="npcSwitchName" style="color:var(--purple);"></strong></div>
+        <div style="font-size:11px;color:var(--muted);font-family:'DM Mono', monospace;margin-bottom:8px;">Digite a senha do NPC <strong id="npcSwitchName" style="color:var(--purple);"></strong></div>
         <div style="display:flex;gap:8px;">
           <input class="admin-input" id="npcSwitchPass" type="password" placeholder="Senha" style="flex:1;">
           <button class="btn-sys" id="npcSwitchConfirm">Entrar</button>
           <button class="btn-ghost" id="npcSwitchCancel">✕</button>
         </div>
-        <div id="npcSwitchError" style="font-size:11px;color:var(--pink);font-family:'Space Mono',monospace;margin-top:6px;display:none;">Senha incorreta.</div>
+        <div id="npcSwitchError" style="font-size:11px;color:var(--pink);font-family:'DM Mono', monospace;margin-top:6px;display:none;">Senha incorreta.</div>
       </div>`
-      : `<p style="font-size:12px;color:var(--muted);font-family:'Space Mono',monospace;">Nenhum NPC criado ainda.</p>`}
+      : `<p style="font-size:12px;color:var(--muted);font-family:'DM Mono', monospace;">Nenhum NPC criado ainda.</p>`}
     </div>
     <div class="admin-section">
       <div class="admin-section-title"><i class="fas fa-robot"></i> Criar NPC</div>
@@ -1801,7 +1803,7 @@ function renderAdmin() {
     </div>
     <div class="admin-section">
       <div class="admin-section-title"><i class="fas fa-bomb"></i> Reset Total</div>
-      <p style="font-size:11px;color:var(--muted);font-family:Space Mono,monospace;margin-bottom:10px;">⚠️ Apaga TODOS os dados do Firebase. Irreversível.</p>
+      <p style="font-size:11px;color:var(--muted);font-family:DM Mono, monospace;margin-bottom:10px;">⚠️ Apaga TODOS os dados do Firebase. Irreversível.</p>
       <button class="btn-danger" id="resetBtn">⚠️ Apagar todos os dados</button>
     </div>
   </div>`;
@@ -1958,7 +1960,7 @@ function showEditProfileModal() {
     <div class="modal-box">
       <div class="modal-title">Editar Perfil</div>
       <input class="modal-input" id="editDisplayName" placeholder="Nome visível" value="${esc(prof.displayName||prof.username||'')}">
-      <div style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;margin:3px 0 8px 2px;">Login: <strong style="color:var(--cyan);">${esc(prof.username)}</strong> — não muda</div>
+      <div style="font-size:10px;color:var(--muted);font-family:'DM Mono', monospace;margin:3px 0 8px 2px;">Login: <strong style="color:var(--cyan);">${esc(prof.username)}</strong> — não muda</div>
       <input class="modal-input" id="editBio" placeholder="Bio" value="${esc(prof.bio||'')}">
 
       <div class="upload-area" id="uploadAreaProf" style="margin-top:12px;">
@@ -1969,7 +1971,7 @@ function showEditProfileModal() {
       ${prof.photoUrl?`<img class="upload-preview" id="uploadPreviewProf" src="${esc(prof.photoUrl)}" style="display:block;border-radius:50%;max-height:80px;object-fit:cover;">`:'<img class="upload-preview" id="uploadPreviewProf">'}
 
       <div class="modal-input" style="padding:10px 12px;margin-top:8px;">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-family:Space Mono,monospace;">Emoji Avatar</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-family:DM Mono, monospace;">Emoji Avatar</div>
         <div class="avatar-picker">${AVATARS.map(a=>`<div class="av-opt ${prof.avatar===a?'selected':''}" data-av="${a}">${a}</div>`).join('')}</div>
       </div>
       <div class="modal-actions">
