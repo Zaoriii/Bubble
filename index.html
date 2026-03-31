@@ -933,15 +933,18 @@ function softRender() {
 // ============================================================
 //  AUTH
 // ============================================================
+// Gera email interno invisível ao usuário: username@bubble.internal
+function fakeEmail(username) {
+  return username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@bubble.internal';
+}
+
 async function login(username, pass) {
-  // Busca o email pelo username
-  const users = await fbGet('users');
-  if (!users) return false;
-  const entry = Object.entries(users).find(([,u]) => u.username === username);
-  if (!entry) return false;
-  const [uid, profile] = entry;
+  if (!username || !pass) return false;
   try {
-    const cred = await signInWithEmailAndPassword(auth, profile.email, pass);
+    const email = fakeEmail(username);
+    const cred = await signInWithEmailAndPassword(auth, email, pass);
+    const profile = await fbGet(`users/${cred.user.uid}`);
+    if (!profile) { await signOut(auth); return false; }
     currentUser = { uid: cred.user.uid, ...profile };
     currentView = 'feed';
     attachListeners();
@@ -950,15 +953,18 @@ async function login(username, pass) {
   } catch(e) { return false; }
 }
 
-async function register(username, email, pass) {
-  if (!username || !email || !pass) return 'fill';
+async function register(username, pass) {
+  if (!username || !pass) return 'fill';
+  if (pass.length < 6) return 'shortpass';
+  // Verifica se username já existe
   const users = await fbGet('users');
-  if (users && Object.values(users).some(u => u.username===username || u.email===email)) return 'exists';
+  if (users && Object.values(users).some(u => u.username === username)) return 'exists';
+  const email = fakeEmail(username);
   try {
     const cred = await createUserWithEmailAndPassword(auth, email, pass);
     const uid = cred.user.uid;
     const profile = {
-      uid, username, email,
+      uid, username,
       bio: '', avatar: '✨', role: 'user', isNPC: false,
       followers: {}, following: {},
       createdAt: new Date().toISOString()
@@ -1162,14 +1168,15 @@ async function createNotification(userId, type, fromId, postId) {
 }
 
 // NPC / ADMIN
-async function createNPC(username, email, password, bio) {
-  if (!currentUser || currentUser.role !== 'admin' || !username || !email || !password) return false;
+async function createNPC(username, password, bio) {
+  if (!currentUser || currentUser.role !== 'admin' || !username || !password) return false;
   const users = await fbGet('users');
-  if (users && Object.values(users).some(u => u.username===username || u.email===email)) return false;
+  if (users && Object.values(users).some(u => u.username === username)) return false;
   try {
+    const email = fakeEmail(username);
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await fbSet(`users/${cred.user.uid}`, {
-      uid: cred.user.uid, username, email,
+      uid: cred.user.uid, username,
       bio: bio||'NPC do sistema.', avatar:'🧬',
       role:'user', isNPC:true,
       followers:{}, following:{},
@@ -1622,11 +1629,10 @@ function renderAdmin() {
       <div class="admin-section-title"><i class="fas fa-robot"></i> Criar NPC</div>
       <div class="admin-row">
         <input class="admin-input" id="npcUser" placeholder="username">
-        <input class="admin-input" id="npcEmail" placeholder="email">
+        <input class="admin-input" id="npcPass" placeholder="senha">
       </div>
       <div class="admin-row">
-        <input class="admin-input" id="npcPass" placeholder="senha">
-        <input class="admin-input" id="npcBio" placeholder="bio">
+        <input class="admin-input" id="npcBio" placeholder="bio" style="flex:1;">
       </div>
       <button class="btn-sys" id="createNPCBtn">+ Criar NPC</button>
     </div>
@@ -1678,16 +1684,15 @@ function renderLogin() {
     <div class="login-card">
       <h3>Entrar na rede</h3>
       <div id="loginError" class="login-error" style="display:none;"></div>
-      <input class="login-field" id="loginUser" placeholder="Usuário">
-      <input class="login-field" type="password" id="loginPass" placeholder="Senha">
+      <input class="login-field" id="loginUser" placeholder="Usuário" autocomplete="username">
+      <input class="login-field" type="password" id="loginPass" placeholder="Senha" autocomplete="current-password">
       <button class="login-btn" id="loginBtn">CONECTAR</button>
     </div>
     <div class="login-card">
       <h3>Criar conta</h3>
       <div id="regError" class="login-error" style="display:none;"></div>
-      <input class="login-field" id="regUser" placeholder="Username">
-      <input class="login-field" id="regEmail" placeholder="Email">
-      <input class="login-field" type="password" id="regPass" placeholder="Senha">
+      <input class="login-field" id="regUser" placeholder="Username (sem espaços)" autocomplete="username">
+      <input class="login-field" type="password" id="regPass" placeholder="Senha (mín. 6 caracteres)" autocomplete="new-password">
       <button class="login-btn" id="regBtn" style="background:linear-gradient(120deg,var(--purple),var(--pink));">CRIAR ACESSO</button>
     </div>
   </div>`;
@@ -1878,7 +1883,7 @@ function closeModal() { document.getElementById('modalOverlay')?.remove(); }
 // ============================================================
 function attachLoginEvents() {
   document.getElementById('loginBtn')?.addEventListener('click', async () => {
-    const u = document.getElementById('loginUser').value;
+    const u = document.getElementById('loginUser').value.trim();
     const p = document.getElementById('loginPass').value;
     const btn = document.getElementById('loginBtn');
     btn.textContent = '...'; btn.disabled = true;
@@ -1891,16 +1896,17 @@ function attachLoginEvents() {
   });
   document.getElementById('loginPass')?.addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('loginBtn').click(); });
   document.getElementById('regBtn')?.addEventListener('click', async () => {
-    const u = document.getElementById('regUser').value;
-    const em = document.getElementById('regEmail').value;
+    const u = document.getElementById('regUser').value.trim();
     const p = document.getElementById('regPass').value;
     const btn = document.getElementById('regBtn');
     btn.textContent = '...'; btn.disabled = true;
-    const res = await register(u, em, p);
-    if (res === 'exists') { const e = document.getElementById('regError'); e.textContent = 'Username ou email já existe.'; e.style.display = 'block'; btn.textContent = 'CRIAR ACESSO'; btn.disabled = false; }
-    else if (res === 'fill') { const e = document.getElementById('regError'); e.textContent = 'Preencha todos os campos.'; e.style.display = 'block'; btn.textContent = 'CRIAR ACESSO'; btn.disabled = false; }
-    else if (res === 'error') { const e = document.getElementById('regError'); e.textContent = 'Erro ao criar conta. Tente outro email.'; e.style.display = 'block'; btn.textContent = 'CRIAR ACESSO'; btn.disabled = false; }
+    const res = await register(u, p);
+    if (res === 'exists')    { showRegErr('Username já existe.'); btn.textContent='CRIAR ACESSO'; btn.disabled=false; }
+    else if (res === 'fill') { showRegErr('Preencha todos os campos.'); btn.textContent='CRIAR ACESSO'; btn.disabled=false; }
+    else if (res === 'shortpass') { showRegErr('Senha precisa ter pelo menos 6 caracteres.'); btn.textContent='CRIAR ACESSO'; btn.disabled=false; }
+    else if (res === 'error') { showRegErr('Erro ao criar conta. Tente outro username.'); btn.textContent='CRIAR ACESSO'; btn.disabled=false; }
   });
+  function showRegErr(msg) { const e=document.getElementById('regError'); e.textContent=msg; e.style.display='block'; }
 }
 
 function attachMainEvents() {
@@ -2030,10 +2036,11 @@ function attachMainEvents() {
 
   // ADMIN
   document.getElementById('createNPCBtn')?.addEventListener('click', async () => {
-    const u=document.getElementById('npcUser').value, e2=document.getElementById('npcEmail').value,
-          p=document.getElementById('npcPass').value, b=document.getElementById('npcBio').value;
-    const ok = await createNPC(u,e2,p,b);
-    toast(ok ? 'NPC criado: '+u : 'Erro: verifique os campos.');
+    const u=document.getElementById('npcUser').value,
+          p=document.getElementById('npcPass').value,
+          b=document.getElementById('npcBio').value;
+    const ok = await createNPC(u,p,b);
+    toast(ok ? 'NPC criado: '+u : 'Erro: username já existe ou campos inválidos.');
   });
   document.getElementById('createSystemPostBtn')?.addEventListener('click', () => {
     const m=document.getElementById('systemMsg').value; createSystemPost(m);
