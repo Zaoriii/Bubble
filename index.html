@@ -1288,6 +1288,7 @@ function renderHeader() {
       <span class="fb-status"><span class="fb-dot ${fbOnline?'online':''}"></span>${fbOnline?'live':'offline'}</span>
       <button class="icon-btn" id="hdr-notif"><i class="far fa-bell"></i>${uc?`<span class="badge">${uc}</span>`:''}</button>
       <button class="icon-btn" id="hdr-msg"><i class="far fa-paper-plane"></i></button>
+      <button class="icon-btn" id="hdr-logout" title="Sair"><i class="fas fa-sign-out-alt"></i></button>
     </div>
   </div>`;
 }
@@ -1317,7 +1318,9 @@ function renderMain() {
 
 // STORIES
 function renderStories() {
-  const users = Object.values(cacheUsers).filter(u => u.uid !== currentUser.uid).slice(0,12);
+  const me = cacheUsers[currentUser.uid] || currentUser;
+  const following = me.following || {};
+  const users = Object.values(cacheUsers).filter(u => u.uid !== currentUser.uid && following[u.uid]).slice(0,12);
   return `<div class="stories-wrap">
     ${users.map(u=>`<div class="story-item" data-view-profile="${u.uid}">
       <div class="story-ring"><div class="story-inner">${u.photoUrl?`<img src="${esc(u.photoUrl)}" loading="lazy">`:(u.avatar||u.username?.[0]||'?')}</div></div>
@@ -1329,11 +1332,15 @@ function renderStories() {
 // FEED
 function renderFeed() {
   const uid = currentUser.uid;
-  const visible = postsArray().filter(p =>
-    p.visibility==='public' ||
-    (p.visibility==='private' && p.authorId===uid) ||
-    (p.visibility==='specific' && (p.authorId===uid || currentUser.role==='admin'))
-  );
+  const me = cacheUsers[uid] || currentUser;
+  const following = me.following || {};
+  const isAdmin = currentUser.role === 'admin';
+  const visible = postsArray().filter(p => {
+    if (isAdmin) return true;
+    if (p.authorId === uid) return true;
+    if (!following[p.authorId]) return false;
+    return p.visibility === 'public' || p.visibility === 'specific' || p.visibility === 'private';
+  });
   return renderStories() + (visible.length
     ? visible.map(renderPost).join('')
     : `<div class="empty-state"><i class="fas fa-satellite-dish"></i><p>Nenhum sinal detectado.<br>Seja o primeiro a transmitir.</p></div>`);
@@ -1350,7 +1357,7 @@ function renderPost(post) {
   if (post.isEvent) cls += ' event-post';
   if (post.visibility !== 'public') cls += ' system-post';
   let avatarCls = 'avatar';
-  if (author.isNPC)        avatarCls += ' npc-ring';
+  if (author.isNPC && currentUser.role==='admin') avatarCls += ' npc-ring';
   if (author.role==='admin') avatarCls += ' admin-ring';
 
   const avatarInner = author.photoUrl
@@ -1375,7 +1382,7 @@ function renderPost(post) {
       <div class="post-meta">
         <div class="post-author">
           <span data-view-profile="${author.uid}" style="cursor:pointer;">${esc(author.username)}</span>
-          ${author.isNPC?'<span class="badge-tag badge-npc">NPC</span>':''}
+          ${author.isNPC && currentUser.role==='admin'?'<span class="badge-tag badge-npc">NPC</span>':''}
           ${author.role==='admin'?'<span class="badge-tag badge-admin">GM</span>':''}
           ${post.ghiTube?'<span class="badge-tag badge-ghitube">GhiTube</span>':''}
           ${post.visibility==='private'?'<span class="badge-tag badge-sys">PRIV</span>':''}
@@ -1455,8 +1462,8 @@ function renderSearchResults({users,posts}) {
   if (users.length) {
     html += `<div class="result-group"><div class="result-label">Usuários</div>`;
     html += users.map(u=>`<div class="result-user" data-view-profile="${u.uid}">
-      <div class="avatar ${u.isNPC?'npc-ring':''}" style="width:36px;height:36px;font-size:18px;">${u.photoUrl?`<img src="${esc(u.photoUrl)}">`:(u.avatar||u.username?.[0])}</div>
-      <div><div style="font-size:13px;font-weight:700;">${esc(u.username)} ${u.isNPC?'<span class="badge-tag badge-npc">NPC</span>':''}</div>
+      <div class="avatar ${u.isNPC && currentUser.role==='admin'?'npc-ring':''}" style="width:36px;height:36px;font-size:18px;">${u.photoUrl?`<img src="${esc(u.photoUrl)}">`:(u.avatar||u.username?.[0])}</div>
+      <div><div style="font-size:13px;font-weight:700;">${esc(u.username)} ${u.isNPC && currentUser.role==='admin'?'<span class="badge-tag badge-npc">NPC</span>':''}</div>
       <div style="font-size:11px;color:var(--muted);">${esc(u.bio||'')}</div></div>
     </div>`).join('');
     html += '</div>';
@@ -1520,7 +1527,7 @@ function renderMessages() {
         const msgs = Object.values(cacheMsgs[c.id]||{}).sort((a,b) => new Date(b.timestamp)-new Date(a.timestamp));
         const lastMsg = msgs[0];
         return `<div class="conv-item" data-open-conv="${c.id}">
-          <div class="avatar ${other?.isNPC?'npc-ring':''}" style="width:44px;height:44px;font-size:24px;">${other?.photoUrl?`<img src="${esc(other.photoUrl)}">`:(other?.avatar||'?')}</div>
+          <div class="avatar ${other?.isNPC && currentUser.role==='admin'?'npc-ring':''}" style="width:44px;height:44px;font-size:24px;">${other?.photoUrl?`<img src="${esc(other.photoUrl)}">`:(other?.avatar||'?')}</div>
           <div style="flex:1;min-width:0;">
             <div class="conv-name">${esc(other?.username||'Desconhecido')}</div>
             <div class="conv-preview">${lastMsg?esc(lastMsg.content.slice(0,50))+'…':'Sem mensagens'}</div>
@@ -1549,8 +1556,8 @@ function renderChat(convId) {
   return `<div class="chat-area">
     <div class="chat-header">
       <button class="chat-back" id="chatBack"><i class="fas fa-chevron-left"></i></button>
-      <div class="avatar ${other?.isNPC?'npc-ring':''}" style="width:36px;height:36px;font-size:20px;">${other?.photoUrl?`<img src="${esc(other.photoUrl)}">`:(other?.avatar||'?')}</div>
-      <div><div class="conv-name">${esc(other?.username||'?')}</div>${other?.isNPC?'<span class="badge-tag badge-npc" style="font-size:8px;">NPC</span>':''}</div>
+      <div class="avatar ${other?.isNPC && currentUser.role==='admin'?'npc-ring':''}" style="width:36px;height:36px;font-size:20px;">${other?.photoUrl?`<img src="${esc(other.photoUrl)}">`:(other?.avatar||'?')}</div>
+      <div><div class="conv-name">${esc(other?.username||'?')}</div>${other?.isNPC && currentUser.role==='admin'?'<span class="badge-tag badge-npc" style="font-size:8px;">NPC</span>':''}</div>
     </div>
     <div class="chat-messages" id="chatMessages">
       ${msgs.map(m=>`<div>
@@ -1584,7 +1591,7 @@ function renderProfile(userId) {
   const isOwn = currentUser.uid === userId;
   const isFollowing = !!(cacheUsers[currentUser.uid]?.following?.[userId]);
   let avCls = 'profile-avatar';
-  if (user.isNPC) avCls += ' npc-profile';
+  if (user.isNPC && currentUser.role==='admin') avCls += ' npc-profile';
   if (user.role==='admin') avCls += ' admin-profile';
   const avatarInner = user.photoUrl ? `<img src="${esc(user.photoUrl)}">` : (user.avatar || user.username?.[0] || '?');
 
@@ -1601,7 +1608,7 @@ function renderProfile(userId) {
         </div>
       </div>
       <div style="margin-top:12px;">
-        <div class="profile-name">${esc(user.username)} ${user.isNPC?'<span class="badge-tag badge-npc">NPC</span>':''} ${user.role==='admin'?'<span class="badge-tag badge-admin">GM</span>':''}</div>
+        <div class="profile-name">${esc(user.username)} ${user.isNPC && currentUser.role==='admin'?'<span class="badge-tag badge-npc">NPC</span>':''} ${user.role==='admin'?'<span class="badge-tag badge-admin">GM</span>':''}</div>
         ${user.bio?`<div class="profile-bio">${esc(user.bio)}</div>`:''}
       </div>
       <div class="profile-actions">
@@ -1622,8 +1629,28 @@ function renderProfile(userId) {
 
 // ADMIN
 function renderAdmin() {
+  const npcs = Object.values(cacheUsers).filter(u => u.isNPC);
   return `<div class="page">
     <div class="page-title"><i class="fas fa-skull"></i> Controle do Mestre</div>
+    <div class="admin-section">
+      <div class="admin-section-title"><i class="fas fa-masks-theater"></i> Trocar para NPC</div>
+      ${npcs.length ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
+        ${npcs.map(u=>`<button class="btn-npc-switch" data-npc-user="${esc(u.username)}" style="display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:8px 12px;cursor:pointer;color:var(--text);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;transition:border-color .2s;" onmouseover="this.style.borderColor='var(--purple)'" onmouseout="this.style.borderColor='var(--border)'">
+          <span style="font-size:20px;">${u.avatar||'👾'}</span>
+          <span>${esc(u.username)}</span>
+        </button>`).join('')}
+      </div>
+      <div id="npcSwitchPanel" style="display:none;margin-top:10px;padding:12px;background:var(--bg2);border-radius:8px;border:1px solid var(--border);">
+        <div style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:8px;">Digite a senha do NPC <strong id="npcSwitchName" style="color:var(--purple);"></strong></div>
+        <div style="display:flex;gap:8px;">
+          <input class="admin-input" id="npcSwitchPass" type="password" placeholder="Senha" style="flex:1;">
+          <button class="btn-sys" id="npcSwitchConfirm">Entrar</button>
+          <button class="btn-ghost" id="npcSwitchCancel">✕</button>
+        </div>
+        <div id="npcSwitchError" style="font-size:11px;color:var(--pink);font-family:'Space Mono',monospace;margin-top:6px;display:none;">Senha incorreta.</div>
+      </div>`
+      : `<p style="font-size:12px;color:var(--muted);font-family:'Space Mono',monospace;">Nenhum NPC criado ainda.</p>`}
+    </div>
     <div class="admin-section">
       <div class="admin-section-title"><i class="fas fa-robot"></i> Criar NPC</div>
       <div class="admin-row">
@@ -1987,6 +2014,10 @@ function attachMainEvents() {
     });
   });
 
+  document.getElementById('hdr-logout')?.addEventListener('click', () => {
+    if (confirm('Deseja sair da sua conta?')) logout();
+  });
+
   document.getElementById('followBtn')?.addEventListener('click', () => {
     followUser(document.getElementById('followBtn').dataset.id);
   });
@@ -2034,6 +2065,51 @@ function attachMainEvents() {
   });
 
   // ADMIN
+  // NPC SWITCHER
+  let _npcSwitchUsername = null;
+  document.querySelectorAll('[data-npc-user]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _npcSwitchUsername = btn.dataset.npcUser;
+      const panel = document.getElementById('npcSwitchPanel');
+      const nameEl = document.getElementById('npcSwitchName');
+      const errEl = document.getElementById('npcSwitchError');
+      const passEl = document.getElementById('npcSwitchPass');
+      if (panel) panel.style.display = 'block';
+      if (nameEl) nameEl.textContent = _npcSwitchUsername;
+      if (errEl) errEl.style.display = 'none';
+      if (passEl) { passEl.value = ''; passEl.focus(); }
+    });
+  });
+  document.getElementById('npcSwitchCancel')?.addEventListener('click', () => {
+    const panel = document.getElementById('npcSwitchPanel');
+    if (panel) panel.style.display = 'none';
+    _npcSwitchUsername = null;
+  });
+  document.getElementById('npcSwitchConfirm')?.addEventListener('click', async () => {
+    if (!_npcSwitchUsername) return;
+    const pass = document.getElementById('npcSwitchPass')?.value;
+    const errEl = document.getElementById('npcSwitchError');
+    const email = `${_npcSwitchUsername.toLowerCase().replace(/[^a-z0-9]/g,'')}@npc.bubble`;
+    try {
+      clearListeners();
+      await signOut(auth);
+      const cred = await signInWithEmailAndPassword(auth, email, pass);
+      const profile = await fbGet(`users/${cred.user.uid}`);
+      if (profile) {
+        currentUser = { uid: cred.user.uid, ...profile };
+        attachListeners();
+        currentView = 'feed';
+        render();
+        toast('Logado como ' + _npcSwitchUsername);
+      }
+    } catch(e) {
+      if (errEl) errEl.style.display = 'block';
+    }
+  });
+  document.getElementById('npcSwitchPass')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('npcSwitchConfirm')?.click();
+  });
+
   document.getElementById('createNPCBtn')?.addEventListener('click', async () => {
     const u=document.getElementById('npcUser').value,
           p=document.getElementById('npcPass').value,
