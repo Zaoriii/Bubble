@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Bubble · Rede Neural</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <style>
@@ -697,7 +698,42 @@ body::before {
 .fb-dot { width:6px; height:6px; border-radius:50%; background: var(--muted); }
 .fb-dot.online { background: #00ff88; box-shadow: 0 0 6px #00ff88; }
 
-@media(max-width:480px) {
+/* CROPPER MODAL */
+.cropper-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.92);
+  backdrop-filter: blur(10px); z-index: 1000;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 16px; gap: 14px;
+  animation: fadeIn .2s ease;
+}
+.cropper-box {
+  width: 100%; max-width: 500px;
+  max-height: 60vh; overflow: hidden;
+  border-radius: 12px; border: 1px solid var(--border);
+  background: var(--bg2);
+}
+.cropper-box img { display: block; max-width: 100%; }
+.cropper-actions {
+  display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+}
+.cropper-btn {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 16px;
+  color: var(--text); font-size: 12px; font-family: 'Space Mono', monospace;
+  cursor: pointer; transition: border-color .2s;
+}
+.cropper-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+.cropper-btn.confirm { background: var(--cyan); color: var(--bg); border-color: var(--cyan); font-weight: 700; }
+.cropper-btn.confirm:hover { opacity: .85; }
+.cropper-ratio-row { display: flex; gap: 8px; }
+.cropper-ratio-btn {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 10px;
+  color: var(--muted); font-size: 10px; font-family: 'Space Mono', monospace;
+  cursor: pointer; transition: all .2s;
+}
+.cropper-ratio-btn.active { border-color: var(--purple); color: var(--purple); background: rgba(155,93,229,.1); }
+
   .profile-stats { gap: 14px; }
   .stat-num { font-size:15px; }
 }
@@ -706,6 +742,7 @@ body::before {
 <body>
 <div id="app"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
 <script type="module">
 // ============================================================
 //  CONFIGURAÇÕES — edite aqui
@@ -771,6 +808,7 @@ function clearListeners() { _unsubs.forEach(fn => fn && fn()); _unsubs = []; }
 function esc(s) {
   return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+function dispName(u) { return u?.displayName || u?.username || '?'; }
 function colorHashtags(txt) {
   return esc(txt).replace(/#([\wÀ-ÿ]+)/g, '<span class="hashtag">#$1</span>');
 }
@@ -838,8 +876,74 @@ async function uploadToCloudinary(file, onProgress) {
 }
 
 // ============================================================
-//  FIREBASE REALTIME DATABASE — helpers
+//  IMAGE CROPPER
 // ============================================================
+function openCropper(file, aspectRatio, onCropped) {
+  const objectUrl = URL.createObjectURL(file);
+  let cropper = null;
+  let currentRatio = aspectRatio;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'cropper-modal-overlay';
+  overlay.innerHTML = `
+    <div class="cropper-box"><img id="cropperImg" src="${objectUrl}"></div>
+    <div class="cropper-ratio-row">
+      <button class="cropper-ratio-btn ${aspectRatio===1?'active':''}" data-ratio="1">1:1</button>
+      <button class="cropper-ratio-btn ${aspectRatio===4/3?'active':''}" data-ratio="${4/3}">4:3</button>
+      <button class="cropper-ratio-btn ${aspectRatio===16/9?'active':''}" data-ratio="${16/9}">16:9</button>
+      <button class="cropper-ratio-btn ${!aspectRatio?'active':''}" data-ratio="0">Livre</button>
+    </div>
+    <div class="cropper-actions">
+      <button class="cropper-btn" id="cropRotateL"><i class="fas fa-undo"></i> Girar</button>
+      <button class="cropper-btn" id="cropZoomIn"><i class="fas fa-search-plus"></i></button>
+      <button class="cropper-btn" id="cropZoomOut"><i class="fas fa-search-minus"></i></button>
+      <button class="cropper-btn" id="cropCancel">Cancelar</button>
+      <button class="cropper-btn confirm" id="cropConfirm"><i class="fas fa-check"></i> Confirmar</button>
+    </div>`;
+
+  document.body.appendChild(overlay);
+
+  const img = document.getElementById('cropperImg');
+  img.onload = () => {
+    cropper = new Cropper(img, {
+      aspectRatio: currentRatio || NaN,
+      viewMode: 1,
+      dragMode: 'move',
+      autoCropArea: 0.9,
+      responsive: true,
+      background: false,
+    });
+  };
+
+  overlay.querySelectorAll('.cropper-ratio-btn').forEach(btn => {
+    btn.onclick = () => {
+      overlay.querySelectorAll('.cropper-ratio-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const r = parseFloat(btn.dataset.ratio);
+      currentRatio = r || NaN;
+      cropper?.setAspectRatio(currentRatio);
+    };
+  });
+
+  document.getElementById('cropRotateL').onclick = () => cropper?.rotate(-90);
+  document.getElementById('cropZoomIn').onclick  = () => cropper?.zoom(0.1);
+  document.getElementById('cropZoomOut').onclick = () => cropper?.zoom(-0.1);
+
+  document.getElementById('cropCancel').onclick = () => {
+    cropper?.destroy(); overlay.remove(); URL.revokeObjectURL(objectUrl);
+  };
+
+  document.getElementById('cropConfirm').onclick = () => {
+    const canvas = cropper.getCroppedCanvas({ maxWidth: 1920, maxHeight: 1920, imageSmoothingQuality: 'high' });
+    canvas.toBlob(blob => {
+      cropper.destroy(); overlay.remove(); URL.revokeObjectURL(objectUrl);
+      const croppedFile = new File([blob], file.name, { type: 'image/jpeg' });
+      onCropped(croppedFile);
+    }, 'image/jpeg', 0.92);
+  };
+}
+
+
 async function fbSet(path, data)       { return set(ref(rtdb, path), data); }
 async function fbUpdate(path, data)    { return update(ref(rtdb, path), data); }
 async function fbPush(path, data)      { return push(ref(rtdb, path), data); }
@@ -1225,14 +1329,15 @@ async function markNotifsRead() {
   cacheNotifs.forEach(n => n.read = true);
 }
 
-async function updateProfile(bio, avatar, photoUrl) {
+async function updateProfile(bio, avatar, photoUrl, displayName) {
   const updates = { bio, avatar };
   if (photoUrl) updates.photoUrl = photoUrl;
+  if (displayName !== undefined) updates.displayName = displayName.trim() || null;
   await fbUpdate(`users/${currentUser.uid}`, updates);
-  currentUser = { ...currentUser, bio, avatar, ...(photoUrl ? {photoUrl} : {}) };
+  currentUser = { ...currentUser, bio, avatar, ...(photoUrl ? {photoUrl} : {}), displayName: updates.displayName };
   closeModal();
   render();
-  toast('Perfil atualizado!');
+  toast("Perfil atualizado!");
 }
 
 // ============================================================
@@ -1324,7 +1429,7 @@ function renderStories() {
   return `<div class="stories-wrap">
     ${users.map(u=>`<div class="story-item" data-view-profile="${u.uid}">
       <div class="story-ring"><div class="story-inner">${u.photoUrl?`<img src="${esc(u.photoUrl)}" loading="lazy">`:(u.avatar||u.username?.[0]||'?')}</div></div>
-      <div class="story-name">${esc(u.username)}</div>
+      <div class="story-name">${esc(dispName(u))}</div>
     </div>`).join('')}
   </div>`;
 }
@@ -1381,7 +1486,7 @@ function renderPost(post) {
       <div class="${avatarCls}" data-view-profile="${author.uid}">${avatarInner}</div>
       <div class="post-meta">
         <div class="post-author">
-          <span data-view-profile="${author.uid}" style="cursor:pointer;">${esc(author.username)}</span>
+          <span data-view-profile="${author.uid}" style="cursor:pointer;">${esc(dispName(author))}</span>
           ${author.isNPC && currentUser.role==='admin'?'<span class="badge-tag badge-npc">NPC</span>':''}
           ${author.role==='admin'?'<span class="badge-tag badge-admin">GM</span>':''}
           ${post.ghiTube?'<span class="badge-tag badge-ghitube">GhiTube</span>':''}
@@ -1408,7 +1513,7 @@ function renderPost(post) {
         <i class="far fa-paper-plane"></i>
       </button>
     </div>
-    ${post.imageUrl?`<div class="post-body"><span class="caption"><span class="uname">${esc(author.username)}</span>${colorHashtags(post.content)}</span></div>`:''}
+    ${post.imageUrl?`<div class="post-body"><span class="caption"><span class="uname">${esc(dispName(author))}</span>${colorHashtags(post.content)}</span></div>`:''}
     ${post.hiddenContent?`<div class="post-body"><span class="hidden-hint" data-reveal="${post.id}">🔮 Conteúdo oculto — clique para revelar</span></div>`:''}
     <div class="comments-section" id="cmts-${post.id}">${renderCommentsInner(post.id, comments, false)}</div>
     <div class="add-comment-row">
@@ -1608,7 +1713,7 @@ function renderProfile(userId) {
         </div>
       </div>
       <div style="margin-top:12px;">
-        <div class="profile-name">${esc(user.username)} ${user.isNPC && currentUser.role==='admin'?'<span class="badge-tag badge-npc">NPC</span>':''} ${user.role==='admin'?'<span class="badge-tag badge-admin">GM</span>':''}</div>
+        <div class="profile-name">${esc(dispName(user))} ${user.isNPC && currentUser.role==='admin'?'<span class="badge-tag badge-npc">NPC</span>':''} ${user.role==='admin'?'<span class="badge-tag badge-admin">GM</span>':''}</div>
         ${user.bio?`<div class="profile-bio">${esc(user.bio)}</div>`:''}
       </div>
       <div class="profile-actions">
@@ -1760,18 +1865,21 @@ function showNewPostModal() {
   document.getElementById('uploadArea').onclick = () => document.getElementById('imgFileInput').click();
   document.getElementById('imgFileInput').onchange = async (e) => {
     const file = e.target.files[0]; if (!file) return;
-    const prog = document.getElementById('uploadProgress');
-    const bar  = document.getElementById('uploadBar');
-    const prev = document.getElementById('uploadPreview');
-    const pub  = document.getElementById('confirmPost');
-    prog.style.display = 'block'; pub.disabled = true;
-    try {
-      const url = await uploadToCloudinary(file, pct => { bar.style.width = pct+'%'; });
-      document.getElementById('newPostImg').value = url;
-      prev.src = url; prev.style.display = 'block';
-      toast('Imagem enviada!');
-    } catch(err) { toast('Erro no upload: ' + err.message); }
-    prog.style.display = 'none'; pub.disabled = false;
+    e.target.value = '';
+    openCropper(file, 4/3, async (croppedFile) => {
+      const prog = document.getElementById('uploadProgress');
+      const bar  = document.getElementById('uploadBar');
+      const prev = document.getElementById('uploadPreview');
+      const pub  = document.getElementById('confirmPost');
+      prog.style.display = 'block'; pub.disabled = true;
+      try {
+        const url = await uploadToCloudinary(croppedFile, pct => { bar.style.width = pct+'%'; });
+        document.getElementById('newPostImg').value = url;
+        prev.src = url; prev.style.display = 'block';
+        toast('Imagem enviada!');
+      } catch(err) { toast('Erro no upload: ' + err.message); }
+      prog.style.display = 'none'; pub.disabled = false;
+    });
   };
 
   document.getElementById('cancelPost').onclick = closeModal;
@@ -1817,18 +1925,21 @@ function showEditPostModal(pid) {
   document.getElementById('uploadAreaEdit').onclick = () => document.getElementById('imgFileInputEdit').click();
   document.getElementById('imgFileInputEdit').onchange = async (e) => {
     const file = e.target.files[0]; if (!file) return;
-    const prog = document.getElementById('uploadProgressEdit');
-    const bar  = document.getElementById('uploadBarEdit');
-    const prev = document.getElementById('uploadPreviewEdit');
-    const pub  = document.getElementById('confirmEdit');
-    prog.style.display = 'block'; pub.disabled = true;
-    try {
-      const url = await uploadToCloudinary(file, pct => { bar.style.width = pct+'%'; });
-      document.getElementById('editPostImgModal').value = url;
-      prev.src = url; prev.style.display = 'block';
-      toast('Imagem enviada!');
-    } catch(err) { toast('Erro no upload: ' + err.message); }
-    prog.style.display = 'none'; pub.disabled = false;
+    e.target.value = '';
+    openCropper(file, 4/3, async (croppedFile) => {
+      const prog = document.getElementById('uploadProgressEdit');
+      const bar  = document.getElementById('uploadBarEdit');
+      const prev = document.getElementById('uploadPreviewEdit');
+      const pub  = document.getElementById('confirmEdit');
+      prog.style.display = 'block'; pub.disabled = true;
+      try {
+        const url = await uploadToCloudinary(croppedFile, pct => { bar.style.width = pct+'%'; });
+        document.getElementById('editPostImgModal').value = url;
+        prev.src = url; prev.style.display = 'block';
+        toast('Imagem enviada!');
+      } catch(err) { toast('Erro no upload: ' + err.message); }
+      prog.style.display = 'none'; pub.disabled = false;
+    });
   };
 
   document.getElementById('cancelEdit').onclick = closeModal;
@@ -1846,6 +1957,8 @@ function showEditProfileModal() {
   const html = `<div class="modal-overlay" id="modalOverlay">
     <div class="modal-box">
       <div class="modal-title">Editar Perfil</div>
+      <input class="modal-input" id="editDisplayName" placeholder="Nome visível" value="${esc(prof.displayName||prof.username||'')}">
+      <div style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;margin:3px 0 8px 2px;">Login: <strong style="color:var(--cyan);">${esc(prof.username)}</strong> — não muda</div>
       <input class="modal-input" id="editBio" placeholder="Bio" value="${esc(prof.bio||'')}">
 
       <div class="upload-area" id="uploadAreaProf" style="margin-top:12px;">
@@ -1873,17 +1986,20 @@ function showEditProfileModal() {
   document.getElementById('uploadAreaProf').onclick = () => document.getElementById('imgFileInputProf').click();
   document.getElementById('imgFileInputProf').onchange = async (e) => {
     const file = e.target.files[0]; if (!file) return;
-    const prog = document.getElementById('uploadProgressProf');
-    const bar  = document.getElementById('uploadBarProf');
-    const prev = document.getElementById('uploadPreviewProf');
-    const pub  = document.getElementById('confirmEditProfile');
-    prog.style.display = 'block'; pub.disabled = true;
-    try {
-      uploadedPhotoUrl = await uploadToCloudinary(file, pct => { bar.style.width = pct+'%'; });
-      prev.src = uploadedPhotoUrl; prev.style.display = 'block';
-      toast('Foto enviada!');
-    } catch(err) { toast('Erro no upload: ' + err.message); }
-    prog.style.display = 'none'; pub.disabled = false;
+    e.target.value = '';
+    openCropper(file, 1, async (croppedFile) => {
+      const prog = document.getElementById('uploadProgressProf');
+      const bar  = document.getElementById('uploadBarProf');
+      const prev = document.getElementById('uploadPreviewProf');
+      const pub  = document.getElementById('confirmEditProfile');
+      prog.style.display = 'block'; pub.disabled = true;
+      try {
+        uploadedPhotoUrl = await uploadToCloudinary(croppedFile, pct => { bar.style.width = pct+'%'; });
+        prev.src = uploadedPhotoUrl; prev.style.display = 'block';
+        toast('Foto enviada!');
+      } catch(err) { toast('Erro no upload: ' + err.message); }
+      prog.style.display = 'none'; pub.disabled = false;
+    });
   };
 
   document.querySelectorAll('.av-opt').forEach(btn => {
@@ -1897,7 +2013,8 @@ function showEditProfileModal() {
   document.getElementById('cancelEditProfile').onclick = closeModal;
   document.getElementById('confirmEditProfile').onclick = () => {
     const bio = document.getElementById('editBio').value;
-    updateProfile(bio, selectedAv, uploadedPhotoUrl);
+    const dn  = document.getElementById('editDisplayName').value;
+    updateProfile(bio, selectedAv, uploadedPhotoUrl, dn);
   };
   document.getElementById('modalOverlay').onclick = e => { if (e.target.id==='modalOverlay') closeModal(); };
 }
