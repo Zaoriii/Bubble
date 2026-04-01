@@ -1499,7 +1499,11 @@ function renderMain() {
 function renderStories() {
   const me = cacheUsers[currentUser.uid] || currentUser;
   const following = me.following || {};
-  const users = Object.values(cacheUsers).filter(u => u.uid !== currentUser.uid && following[u.uid]).slice(0,12);
+  const users = Object.values(cacheUsers).filter(u => {
+    if (u.uid === currentUser.uid) return false;
+    if (u.isNPC && u.createdBy !== currentUser.uid) return false;
+    return following[u.uid];
+  }).slice(0,12);
   return `<div class="stories-wrap">
     ${users.map(u=>`<div class="story-item" data-view-profile="${u.uid}">
       <div class="story-ring"><div class="story-inner">${u.photoUrl?`<img src="${esc(u.photoUrl)}" loading="lazy">`:(u.avatar||u.username?.[0]||'?')}</div></div>
@@ -1849,7 +1853,7 @@ function renderProfile(userId) {
 
 // ADMIN
 function renderAdmin() {
-  const npcs = Object.values(cacheUsers).filter(u => u.isNPC && (!u.createdBy || u.createdBy === currentUser.uid));
+  const npcs = Object.values(cacheUsers).filter(u => u.isNPC && u.createdBy === currentUser.uid);
   const npcUids = new Set(npcs.map(u => u.uid));
 
   // Notificações dos NPCs deste admin
@@ -2570,7 +2574,7 @@ function attachMainEvents() {
   });
   document.getElementById('listUsersBtn')?.addEventListener('click', () => {
     document.getElementById('userListOutput').innerHTML = Object.values(cacheUsers)
-      .filter(u => !u.isNPC || !u.createdBy || u.createdBy === currentUser.uid)
+      .filter(u => !u.isNPC || u.createdBy === currentUser.uid)
       .map(u=>`
       <div class="user-list-row">
         <span>${u.avatar||'?'}</span>
