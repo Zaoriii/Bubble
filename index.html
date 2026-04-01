@@ -1296,6 +1296,7 @@ async function sendMessage(receiverId, content) {
     timestamp: new Date().toISOString()
   });
   await fbUpdate(`conversations/${convId}`, { lastUpdated: new Date().toISOString() });
+  await createNotification(receiverId, 'message', currentUser.uid, null);
   renderChatMessages(convId);
 }
 
@@ -1651,7 +1652,7 @@ function renderSearchResults({users,posts}) {
 function renderTrending() {
   const tags = getTrendingHashtags();
   return `<div class="page">
-    <div class="page-title"><i class="fas fa-fire"></i> Pressão — Trending</div>
+    <div class="page-title"><i class="fas fa-fire"></i> Trending</div>
     ${tags.length ? tags.map((t,i)=>`<div class="trending-item" data-search-tag="${t[0]}">
       <span class="trend-num">#${i+1}</span>
       <span class="trend-tag">${esc(t[0])}</span>
@@ -1670,7 +1671,7 @@ function renderNotifications() {
       const from = getUserById(n.fromUserId);
       return `<div class="notif-item">
         <div class="avatar" style="width:36px;height:36px;font-size:18px;">${from?.photoUrl?`<img src="${esc(from.photoUrl)}">`:(from?.avatar||'?')}</div>
-        <div class="notif-text"><strong>${esc(from?.username||'?')}</strong> ${n.type==='like'?'estourou seu post':'comentou no seu post'}</div>
+        <div class="notif-text"><strong>${esc(dispName(from)||'?')}</strong> ${n.type==='like'?'estourou seu post':n.type==='message'?'mandou uma bolha':'comentou no seu post'}</div>
         <div class="notif-time">${timeAgo(n.timestamp)}</div>
       </div>`;
     }).join('')
@@ -1764,6 +1765,7 @@ function renderProfile(userId) {
   if (user.isNPC && currentUser.role==='admin') avCls += ' npc-profile';
   if (user.role==='admin') avCls += ' admin-profile';
   const avatarInner = user.photoUrl ? `<img src="${esc(user.photoUrl)}">` : (user.avatar || user.username?.[0] || '?');
+  const avatarClickable = user.photoUrl ? `data-open-photo="${esc(user.photoUrl)}"` : '';
 
   const isOwn = currentUser.uid === userId;
   const followersPrivate = user.followersPrivate && !isOwn && currentUser.role !== 'admin';
@@ -1791,7 +1793,7 @@ function renderProfile(userId) {
   return `<div class="page">
     <div class="profile-hero">
       <div class="profile-top">
-        <div class="${avCls}">${avatarInner}</div>
+        <div class="${avCls}" ${avatarClickable} style="${user.photoUrl?'cursor:pointer;':''}">${avatarInner}</div>
         <div style="flex:1;">
           <div class="profile-stats">
             <div class="stat-item"><div class="stat-num">${allPosts.length}</div><div class="stat-label">posts</div></div>
@@ -2125,6 +2127,19 @@ function showEditProfileModal() {
 
 function closeModal() { document.getElementById('modalOverlay')?.remove(); }
 
+function openPhotoViewer(url) {
+  const html = `<div id="photoViewer" style="position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:2000;display:flex;align-items:center;justify-content:center;cursor:zoom-out;animation:fadeIn .2s ease;">
+    <img src="${url}" style="max-width:95vw;max-height:90vh;object-fit:contain;border-radius:8px;user-select:none;">
+    <button style="position:absolute;top:16px;right:16px;background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer;opacity:0.7;" id="closePhotoViewer"><i class="fas fa-times"></i></button>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+  document.getElementById('photoViewer').addEventListener('click', e => {
+    if (e.target.id === 'closePhotoViewer' || e.target.closest('#closePhotoViewer') || e.target.id === 'photoViewer') {
+      document.getElementById('photoViewer').remove();
+    }
+  });
+}
+
 function openFollowersModal(userId, mode) {
   // mode: 'followers' | 'following'
   const user = cacheUsers[userId]; if (!user) return;
@@ -2336,6 +2351,11 @@ function attachMainEvents() {
     startConvWithUser(document.getElementById('msgUserBtn').dataset.id);
   });
 
+  // Profile avatar photo viewer
+  document.querySelectorAll('[data-open-photo]').forEach(el => {
+    el.addEventListener('click', e => { e.stopPropagation(); openPhotoViewer(el.dataset.openPhoto); });
+  });
+
   // Profile tabs
   document.querySelectorAll('[data-profile-tab]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -2374,8 +2394,27 @@ function attachMainEvents() {
 
   document.querySelectorAll('[data-search-tag]').forEach(el => {
     el.addEventListener('click', () => {
+      const tag = el.dataset.searchTag;
+      const following = cacheUsers[currentUser.uid]?.following || {};
+      const term = tag.toLowerCase();
+      // posts com a tag (de quem o usuário segue ou próprios)
+      const posts = postsArray().filter(p =>
+        p.content?.toLowerCase().includes(term) &&
+        (p.visibility==='public' || p.authorId===currentUser.uid) &&
+        (p.authorId===currentUser.uid || following[p.authorId])
+      );
+      // usuários apenas entre seguidos
+      const users = Object.values(cacheUsers).filter(u =>
+        (u.username?.toLowerCase().includes(term) || u.bio?.toLowerCase().includes(term)) &&
+        (u.uid===currentUser.uid || following[u.uid])
+      );
       currentView='search'; render();
-      setTimeout(() => { const si=document.getElementById('searchInput'); if(si){ si.value=el.dataset.searchTag; doSearch(); } }, 50);
+      setTimeout(() => {
+        const si=document.getElementById('searchInput');
+        if(si) si.value=tag;
+        const res=document.getElementById('searchResults');
+        if(res){ res.innerHTML=renderSearchResults({users,posts}); attachSearchResultEvents(); }
+      }, 50);
     });
   });
 
