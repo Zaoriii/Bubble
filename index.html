@@ -1345,6 +1345,7 @@ async function createNPC(username, password, bio) {
       uid: cred.user.uid, username,
       bio: bio||'NPC do sistema.', avatar:'🧬',
       role:'user', isNPC:true,
+      createdBy: currentUser.uid,
       followers:{}, following:{},
       createdAt: new Date().toISOString()
     });
@@ -1833,7 +1834,7 @@ function renderProfile(userId) {
 
 // ADMIN
 function renderAdmin() {
-  const npcs = Object.values(cacheUsers).filter(u => u.isNPC);
+  const npcs = Object.values(cacheUsers).filter(u => u.isNPC && u.createdBy === currentUser.uid);
   return `<div class="page">
     <div class="page-title"><i class="fas fa-skull"></i> Controle do Mestre</div>
     <div class="admin-section">
@@ -1950,7 +1951,7 @@ function showNewPostModal() {
         <button class="vis-btn" data-vis="private">🔒 Privado</button>
         <button class="vis-btn" data-vis="specific">👁️ Restrito</button>
       </div>
-      <input class="modal-input" id="newPostHidden" placeholder="Conteúdo oculto ARG (opcional)">
+      ${currentUser.role==='admin' ? '<input class="modal-input" id="newPostHidden" placeholder="Conteúdo oculto ARG (opcional)">' : ''}
       <div class="modal-actions">
         <button class="modal-cancel" id="cancelPost">Cancelar</button>
         <button class="modal-publish" id="confirmPost">Publicar</button>
@@ -1992,7 +1993,7 @@ function showNewPostModal() {
   document.getElementById('confirmPost').onclick = () => {
     const c      = document.getElementById('newPostContent').value;
     const img    = document.getElementById('newPostImg').value;
-    const hidden = document.getElementById('newPostHidden').value;
+    const hidden = currentUser.role==='admin' ? (document.getElementById('newPostHidden')?.value || '') : '';
     createPost(c, img, selectedVis, hidden);
   };
   document.querySelectorAll('.vis-btn').forEach(btn => {
@@ -2019,7 +2020,7 @@ function showEditPostModal(pid) {
       <div class="upload-progress" id="uploadProgressEdit"><div class="upload-progress-bar" id="uploadBarEdit"></div></div>
       ${post.imageUrl?`<img class="upload-preview" id="uploadPreviewEdit" src="${esc(post.imageUrl)}" style="display:block;">`:'<img class="upload-preview" id="uploadPreviewEdit">'}
       <input class="modal-input" id="editPostImgModal" placeholder="URL da imagem" value="${esc(post.imageUrl||'')}">
-      <input class="modal-input" id="editPostHiddenModal" placeholder="Conteúdo oculto ARG" value="${esc(post.hiddenContent||'')}">
+      ${currentUser.role==='admin' ? `<input class="modal-input" id="editPostHiddenModal" placeholder="Conteúdo oculto ARG" value="${esc(post.hiddenContent||'')}">` : ''}
       <div class="modal-actions">
         <button class="modal-cancel" id="cancelEdit">Cancelar</button>
         <button class="modal-publish" id="confirmEdit">Salvar</button>
@@ -2052,7 +2053,7 @@ function showEditPostModal(pid) {
   document.getElementById('confirmEdit').onclick = () => {
     const c      = document.getElementById('editPostContentModal').value;
     const img    = document.getElementById('editPostImgModal').value;
-    const hidden = document.getElementById('editPostHiddenModal').value;
+    const hidden = currentUser.role==='admin' ? (document.getElementById('editPostHiddenModal')?.value || '') : '';
     editPost(pid, c, img, hidden);
   };
   document.getElementById('modalOverlay').onclick = e => { if (e.target.id==='modalOverlay') closeModal(); };
@@ -2518,7 +2519,9 @@ function attachMainEvents() {
     const pid=document.getElementById('delPostId').value; deletePost(pid); toast('Post removido.');
   });
   document.getElementById('listUsersBtn')?.addEventListener('click', () => {
-    document.getElementById('userListOutput').innerHTML = Object.values(cacheUsers).map(u=>`
+    document.getElementById('userListOutput').innerHTML = Object.values(cacheUsers)
+      .filter(u => !u.isNPC || u.createdBy === currentUser.uid)
+      .map(u=>`
       <div class="user-list-row">
         <span>${u.avatar||'?'}</span>
         <span class="uname">${esc(u.username)}</span>
