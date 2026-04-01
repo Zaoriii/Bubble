@@ -1072,6 +1072,16 @@ function attachListeners() {
       }
     }));
 
+    // Notificações dos NPCs do admin
+    if (currentUser.role === 'admin') {
+      _unsubs.push(fbListen('notifications', val => {
+        if (!val) { window._cacheNpcNotifs = []; return; }
+        window._cacheNpcNotifs = Object.entries(val)
+          .map(([id,n]) => ({...n, id}));
+        if (currentView === 'admin') softRender();
+      }));
+    }
+
     // Conversations
     _unsubs.push(fbListen('conversations', val => {
       cacheConvs = val || {};
@@ -1504,9 +1514,14 @@ function renderFeed() {
   const me = cacheUsers[uid] || currentUser;
   const following = me.following || {};
   const isAdmin = currentUser.role === 'admin';
+  const myNpcIds = new Set(
+    Object.values(cacheUsers)
+      .filter(u => u.isNPC && u.createdBy === uid)
+      .map(u => u.uid)
+  );
   const visible = postsArray().filter(p => {
-    if (isAdmin) return true;
     if (p.authorId === uid) return true;
+    if (isAdmin) return myNpcIds.has(p.authorId); // admin vê só posts dos próprios NPCs
     if (!following[p.authorId]) return false;
     return p.visibility === 'public' || p.visibility === 'specific' || p.visibility === 'private';
   });
@@ -1835,8 +1850,43 @@ function renderProfile(userId) {
 // ADMIN
 function renderAdmin() {
   const npcs = Object.values(cacheUsers).filter(u => u.isNPC && (!u.createdBy || u.createdBy === currentUser.uid));
+  const npcUids = new Set(npcs.map(u => u.uid));
+
+  // Notificações dos NPCs deste admin
+  const allNotifs = Object.values(
+    Object.fromEntries(
+      Object.entries(cacheNotifs.reduce ? {} : {})
+    )
+  );
+  // cacheNotifs só tem do currentUser — precisamos das notifs dos NPCs via cacheUsers
+  // Buscar notifs de todos os NPCs do admin a partir do Firebase cache
+  // Usamos cacheNpcNotifs que será populado pelo listener
+  const npcNotifs = (window._cacheNpcNotifs || [])
+    .filter(n => npcUids.has(n.userId))
+    .sort((a,b) => new Date(b.timestamp)-new Date(a.timestamp))
+    .slice(0, 30);
+
   return `<div class="page">
     <div class="page-title"><i class="fas fa-skull"></i> Controle do Mestre</div>
+    <div class="admin-section">
+      <div class="admin-section-title"><i class="fas fa-bell"></i> Notificações dos NPCs</div>
+      ${npcNotifs.length ? npcNotifs.map(n => {
+        const npc  = cacheUsers[n.userId];
+        const from = cacheUsers[n.fromUserId];
+        const typeLabel = n.type==='like' ? 'estourou post de' : n.type==='message' ? 'mandou bolha para' : 'comentou no post de';
+        return `<div class="notif-item">
+          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">
+            <div class="avatar" style="width:30px;height:30px;font-size:15px;flex-shrink:0;">${from?.photoUrl?`<img src="${esc(from.photoUrl)}">`:(from?.avatar||'?')}</div>
+            <div class="notif-text" style="font-size:12px;">
+              <strong style="color:var(--cyan);">${esc(dispName(from)||'?')}</strong>
+              <span style="color:var(--muted);"> ${typeLabel} </span>
+              <strong>${esc(dispName(npc)||'NPC')}</strong>
+            </div>
+            <div class="notif-time">${timeAgo(n.timestamp)}</div>
+          </div>
+        </div>`;
+      }).join('') : '<div style="padding:12px 0;font-size:11px;color:var(--muted);font-family:DM Mono,monospace;">Nenhuma notificação ainda.</div>'}
+    </div>
     <div class="admin-section">
       <div class="admin-section-title"><i class="fas fa-masks-theater"></i> Trocar para NPC</div>
       ${npcs.length ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
