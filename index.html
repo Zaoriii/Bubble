@@ -1621,7 +1621,7 @@ function renderSearch(results=null) {
 function doSearch() {
   const term = document.getElementById('searchInput')?.value.toLowerCase().trim();
   if (!term) return;
-  const users = Object.values(cacheUsers).filter(u => u.username?.toLowerCase().includes(term) || u.bio?.toLowerCase().includes(term));
+  const users = Object.values(cacheUsers).filter(u => (u.displayName||u.username)?.toLowerCase() === term);
   const posts = postsArray().filter(p => p.content?.toLowerCase().includes(term) && (p.visibility==='public' || p.authorId===currentUser.uid));
   document.getElementById('searchResults').innerHTML = renderSearchResults({users,posts});
   attachSearchResultEvents();
@@ -1834,7 +1834,7 @@ function renderProfile(userId) {
 
 // ADMIN
 function renderAdmin() {
-  const npcs = Object.values(cacheUsers).filter(u => u.isNPC && u.createdBy === currentUser.uid);
+  const npcs = Object.values(cacheUsers).filter(u => u.isNPC && (!u.createdBy || u.createdBy === currentUser.uid));
   return `<div class="page">
     <div class="page-title"><i class="fas fa-skull"></i> Controle do Mestre</div>
     <div class="admin-section">
@@ -2406,7 +2406,7 @@ function attachMainEvents() {
       );
       // usuários apenas entre seguidos
       const users = Object.values(cacheUsers).filter(u =>
-        (u.username?.toLowerCase().includes(term) || u.bio?.toLowerCase().includes(term)) &&
+        (u.displayName||u.username)?.toLowerCase() === term &&
         (u.uid===currentUser.uid || following[u.uid])
       );
       currentView='search'; render();
@@ -2520,7 +2520,7 @@ function attachMainEvents() {
   });
   document.getElementById('listUsersBtn')?.addEventListener('click', () => {
     document.getElementById('userListOutput').innerHTML = Object.values(cacheUsers)
-      .filter(u => !u.isNPC || u.createdBy === currentUser.uid)
+      .filter(u => !u.isNPC || !u.createdBy || u.createdBy === currentUser.uid)
       .map(u=>`
       <div class="user-list-row">
         <span>${u.avatar||'?'}</span>
